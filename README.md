@@ -1,0 +1,148 @@
+# eduswap-web
+
+EduSwap is a React + TypeScript + Vite web app for students to exchange skills, connect with peers, and manage learning sessions.
+
+## Local setup
+
+```bash
+npm install
+npm run dev
+```
+
+## Firebase Storage CORS
+
+Browser uploads to Firebase Storage require the local development origins to be allowed by the bucket's CORS policy. With Google Cloud CLI installed and authenticated, apply the included policy with:
+
+```bash
+gcloud storage buckets update gs://eduswap-5e9ed.firebasestorage.app --cors-file=storage.cors.json
+```
+
+Before applying this policy to a deployed app, add its origin to `storage.cors.json`. Storage security rules still control which users may read or write each file.
+
+## Testing
+
+```bash
+npm test
+```
+
+Firestore security rules tests run against the Firestore emulator under a `demo-eduswap` project, so they never touch real data. They need Java 21 or later on your `PATH`:
+
+```bash
+npm run test:rules
+```
+
+Run them after any change to `firestore.rules`.
+
+## Build
+
+```bash
+npm run build
+```
+
+## Firestore seeding
+
+Seed the full demo dataset:
+
+```bash
+npm run seed
+```
+
+Seed only the remaining collections (skills catalog, transactions, comments):
+
+```bash
+npm run seed:remaining
+```
+
+Migrate existing user profiles to ensure skill fields are present:
+
+```bash
+npm run migrate:users
+```
+
+Before deploying the public-profile privacy changes, migrate existing users with
+Firebase Admin credentials. The migration is safe to rerun and copies only the
+allowlisted discovery fields to `publicProfiles`:
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS = 'C:/secure/path/firebase-service-account.json'
+npm run migrate:public-profiles
+```
+
+Run this migration before deploying the updated frontend and `firestore.rules`.
+The new client reads discovery profiles from `publicProfiles`, while the rules
+restrict `users` documents to their owner and admins. Deploy the updated
+callable functions as well so completed-session totals remain current.
+
+Deploy Firebase security rules after initializing Firestore and Storage:
+
+```bash
+npm run deploy:rules
+```
+
+Move existing registration documents out of public user profiles and rotate their old download tokens:
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS = 'C:/secure/path/firebase-service-account.json'
+npm run migrate:registration-documents
+```
+
+Run this migration before relying on the new admin-only document access rules.
+
+Admin access is controlled by the Firebase Auth `admin` custom claim. Do not use
+the `users.isAdmin` profile field as an authorization mechanism.
+
+Promote an existing Firebase Auth account to the owner/admin role from a trusted
+environment with Firebase Admin credentials:
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS = 'C:/secure/path/firebase-service-account.json'
+npm run promote:owner -- stacymanth@gmail.com
+```
+
+The account must sign out and sign in again after promotion so Firebase refreshes
+the custom claim.
+
+## Cloud Functions
+
+Session completion (credit transfer) and cancellation run as callable Cloud
+Functions in `functions/`, because browsers must not write credit balances.
+The Firebase project must be on the Blaze plan to deploy functions.
+
+```bash
+npm --prefix functions install
+firebase deploy --only functions,firestore:rules
+```
+
+The credit amount per session comes from the admin setting
+`settings/platform.creditsPerSession` (default 10), not from the session document.
+
+To test locally, run `npm --prefix functions run serve` and set
+`VITE_USE_FUNCTIONS_EMULATOR=true` in `.env.local`.
+
+## Notes
+
+- The app uses Firebase Firestore and Authentication.
+- Skills are now captured at signup and used for matching in Explore.
+# LiveKit configuration
+
+EduSwap uses LiveKit for authenticated group calls. Copy `.env.example` to `.env.local`, then replace the LiveKit placeholders with values from your own LiveKit Cloud project:
+
+```env
+VITE_LIVEKIT_URL=wss://your-project.livekit.cloud
+VITE_LIVEKIT_TOKEN_ENDPOINT=http://localhost:8787/api/livekit/token
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=your-api-key
+LIVEKIT_API_SECRET=your-api-secret
+LIVEKIT_TOKEN_PORT=8787
+APP_ORIGIN=http://localhost:5173
+GOOGLE_APPLICATION_CREDENTIALS=C:/secure/path/firebase-service-account.json
+```
+
+The API secret and Firebase service-account file must remain server-only. Start the app and token server in separate terminals:
+
+```powershell
+npm run dev
+npm run livekit:server
+```
+
+The token endpoint verifies the Firebase login and confirms that the user belongs to the requested EduSwap group-call room before issuing a short-lived LiveKit token.

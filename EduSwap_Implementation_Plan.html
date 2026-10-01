@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduSwap — Implementation Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  
+  :root {
+    --primary: #6C3CE1;
+    --primary-light: #8B5CF6;
+    --secondary: #0EA5E9;
+    --accent: #10B981;
+    --dark: #0F172A;
+    --gray: #64748B;
+    --light: #F1F5F9;
+    --white: #FFFFFF;
+    --border: #E2E8F0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: var(--dark);
+    line-height: 1.7;
+    background: var(--white);
+    font-size: 11pt;
+  }
+
+  @media print {
+    body { font-size: 10pt; }
+    .page-break { page-break-before: always; }
+    .no-print { display: none; }
+    section { page-break-inside: avoid; }
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 50px; }
+
+  /* Cover */
+  .cover {
+    text-align: center;
+    padding: 100px 40px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border-radius: 0;
+    margin: -40px -50px 40px -50px;
+  }
+  .cover h1 { font-size: 42pt; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; }
+  .cover .subtitle { font-size: 16pt; font-weight: 300; opacity: 0.9; margin-bottom: 30px; }
+  .cover .meta { font-size: 10pt; opacity: 0.75; }
+  .cover .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 8px 24px;
+    border-radius: 20px;
+    font-size: 10pt;
+    font-weight: 500;
+    margin: 5px;
+  }
+
+  h2 {
+    font-size: 18pt;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 40px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--primary);
+  }
+
+  h3 {
+    font-size: 13pt;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 25px 0 10px 0;
+  }
+
+  h4 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--gray);
+    margin: 15px 0 8px 0;
+  }
+
+  p { margin-bottom: 10px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 10pt;
+  }
+  th {
+    background: var(--primary);
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:nth-child(even) { background: var(--light); }
+
+  .info-box {
+    background: #EEF2FF;
+    border-left: 4px solid var(--primary);
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .warning-box {
+    background: #FEF3C7;
+    border-left: 4px solid #F59E0B;
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+  }
+
+  ul, ol { margin: 10px 0 10px 25px; }
+  li { margin-bottom: 5px; }
+
+  code {
+    background: var(--light);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9.5pt;
+    font-family: 'Consolas', monospace;
+  }
+
+  pre {
+    background: var(--dark);
+    color: #E2E8F0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 9pt;
+    margin: 10px 0;
+    font-family: 'Consolas', monospace;
+    line-height: 1.5;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 15px 0;
+  }
+  .col-card {
+    background: var(--light);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .col-card h4 { color: var(--primary); margin-top: 0; }
+
+  .phase-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin: 25px 0 12px 0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .toc a {
+    color: var(--dark);
+    text-decoration: none;
+    display: block;
+    padding: 4px 0;
+    border-bottom: 1px dotted var(--border);
+  }
+  .toc a:hover { color: var(--primary); }
+
+  .screen-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 10px 0;
+  }
+  .screen-item {
+    background: var(--light);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 9.5pt;
+    border: 1px solid var(--border);
+  }
+  .screen-item .icon { font-size: 20pt; margin-bottom: 5px; }
+
+  .print-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 30px;
+    font-size: 11pt;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(108,60,225,0.4);
+    z-index: 100;
+  }
+  .print-btn:hover { background: var(--primary-light); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- COVER -->
+<div class="cover">
+  <h1>EduSwap</h1>
+  <p class="subtitle">Skill Exchange Platform — Implementation Plan</p>
+  <div>
+    <span class="badge">📱 Android App (Kotlin)</span>
+    <span class="badge">🌐 Web App (React)</span>
+  </div>
+  <p class="meta" style="margin-top:30px;">
+    Final Year Project — Computer Science (Application Development)<br>
+    Document Version 1.0 &bull; March 2026
+  </p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<h2>Table of Contents</h2>
+<div class="toc">
+  <a href="#overview">1. Project Overview</a>
+  <a href="#architecture">2. System Architecture</a>
+  <a href="#tech-stack">3. Technology Stack</a>
+  <a href="#data-model">4. Data Model</a>
+  <a href="#features">5. Core Features</a>
+  <a href="#android">6. Android Application (Kotlin)</a>
+  <a href="#web">7. Web Application (React)</a>
+  <a href="#api">8. API Endpoints</a>
+  <a href="#matching">9. Matching Algorithm</a>
+  <a href="#credits">10. Credit System</a>
+  <a href="#teams">11. Microsoft Teams Integration</a>
+  <a href="#screens">12. Screen Designs</a>
+  <a href="#phases">13. Development Phases</a>
+  <a href="#testing">14. Testing & Verification</a>
+  <a href="#deployment">15. Deployment Strategy</a>
+</div>
+
+<!-- 1. OVERVIEW -->
+<div class="page-break"></div>
+<h2 id="overview">1. Project Overview</h2>
+<p>
+  <strong>EduSwap</strong> is a skill exchange platform where university students trade knowledge instead of money. 
+  A student who can teach Mathematics but wants to learn Programming is matched with someone who can teach 
+  Programming but wants to learn Mathematics. The platform facilitates scheduling, communication, progress 
+  tracking, and a credit-based economy.
+</p>
+
+<h3>Problem Statement</h3>
+<p>
+  Many students cannot afford private tutoring or supplementary learning resources. Meanwhile, fellow students 
+  possess valuable skills and knowledge they could share. There is no structured platform that connects these 
+  complementary needs within and across university communities.
+</p>
+
+<h3>Solution</h3>
+<p>
+  EduSwap provides a dual-platform (Android + Web) solution that:
+</p>
+<ul>
+  <li>Automatically matches users with complementary skill sets</li>
+  <li>Enables session scheduling with Microsoft Teams integration</li>
+  <li>Tracks learning progress through a credit system</li>
+  <li>Facilitates real-time communication between matched users</li>
+  <li>Supports multiple universities with cross-institution matching</li>
+  <li>Provides community feedback through comments and ratings</li>
+</ul>
+
+<h3>Key Objectives</h3>
+<table>
+  <tr><th>#</th><th>Objective</th><th>Measurable Outcome</th></tr>
+  <tr><td>1</td><td>Enable skill-based matching</td><td>Algorithm matches complementary users with 90%+ relevance</td></tr>
+  <tr><td>2</td><td>Support real-time communication</td><td>Chat messages delivered in under 2 seconds</td></tr>
+  <tr><td>3</td><td>Integrate virtual sessions</td><td>Teams links launch correctly on Android and Web</td></tr>
+  <tr><td>4</td><td>Multi-university support</td><td>Users from different universities can discover and match</td></tr>
+  <tr><td>5</td><td>Credit economy</td><td>Credits earned/spent tracked accurately per session</td></tr>
+</table>
+
+<!-- 2. ARCHITECTURE -->
+<div class="page-break"></div>
+<h2 id="architecture">2. System Architecture</h2>
+<p>Both the Android and Web applications share a single Firebase backend, ensuring data consistency across platforms.</p>
+
+<div class="info-box">
+  <strong>Why Firebase?</strong> Zero server management, built-in authentication, real-time database listeners, 
+  generous free tier, and automatic scaling — ideal for a student project that needs to be demo-ready quickly.
+</div>
+
+<h3>Architecture Diagram</h3>
+<pre>
+┌─────────────────┐     ┌─────────────────┐
+│   Android App   │     │    Web App       │
+│   Kotlin +      │     │    React +       │
+│   Jetpack       │     │    TypeScript    │
+│   Compose       │     │                  │
+└────────┬────────┘     └────────┬─────────┘
+         │                       │
+         └───────────┬───────────┘
+                     │
+          ┌──────────▼──────────┐
+          │   Firebase Backend  │
+          ├─────────────────────┤
+          │ • Authentication    │
+          │ • Cloud Firestore   │
+          │ • Cloud Storage     │
+          │ • Cloud Messaging   │
+          │ • Hosting (Web)     │
+          └─────────────────────┘
+                     │
+          ┌──────────▼──────────┐
+          │  Microsoft Teams    │
+          │  (Deep Links)       │
+          └─────────────────────┘
+</pre>
+
+<h3>Design Patterns</h3>
+<div class="two-col">
+  <div class="col-card">
+    <h4>📱 Android — MVVM + Clean Architecture</h4>
+    <ul>
+      <li><strong>UI Layer:</strong> Jetpack Compose screens</li>
+      <li><strong>ViewModel:</strong> StateFlow + Coroutines</li>
+      <li><strong>Domain:</strong> Use Cases (business logic)</li>
+      <li><strong>Data:</strong> Repositories → Firebase</li>
+      <li><strong>DI:</strong> Hilt</li>
+    </ul>
+  </div>
+  <div class="col-card">
+    <h4>🌐 Web — Component Architecture</h4>
+    <ul>
+      <li><strong>UI Layer:</strong> React components</li>
+      <li><strong>State:</strong> React Context + hooks</li>
+      <li><strong>Services:</strong> Firebase SDK modules</li>
+      <li><strong>Routing:</strong> React Router</li>
+      <li><strong>Styling:</strong> CSS Modules / Styled</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 3. TECH STACK -->
+<h2 id="tech-stack">3. Technology Stack</h2>
+
+<h3>Android Application</h3>
+<table>
+  <tr><th>Component</th><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Language</td><td>Kotlin</td><td>Primary development language</td></tr>
+  <tr><td>UI Framework</td><td>Jetpack Compose</td><td>Declarative UI toolkit</td></tr>
+  <tr><td>Design System</td><td>Material 3</td><td>Modern Material Design components</td></tr>
+  <tr><td>Architecture</td><td>MVVM + Clean Architecture</td><td>Separation of concerns</td></tr>
+  <tr><td>Dependency Injection</td><td>Hilt (Dagger)</td><td>Automated DI</td></tr>
+  <tr><td>Async</td><td>Coroutines + Flow</td><td>Reactive async operations</td></tr>
+  <tr><td>Navigation</td><td>Compose Navigation</td><td>Type-safe screen navigation</td></tr>
+  <tr><td>Image Loading</td><td>Coil</td><td>Efficient image loading for Compose</td></tr>
+  <tr><td>Backend</td><td>Firebase SDK</td><td>Auth, Firestore, Storage, FCM</td></tr>
+  <tr><td>Min SDK</td><td>API 26 (Android 8.0)</td><td>~95% device coverage</td></tr>
+</table>
+
+<h3>Web Application</h3>
+<table>
+  <tr><th>Component</th><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Language</td><td>TypeScript</td><td>Type-safe JavaScript</td></tr>
+  <tr><td>Framework</td><td>React 18+ (Vite)</td><td>Component-based SPA</td></tr>
+  <tr><td>Styling</td><td>CSS Modules + CSS Variables</td><td>Scoped, maintainable styles</td></tr>
+  <tr><td>State</td><td>React Context + useReducer</td><td>Global state management</td></tr>
+  <tr><td>Routing</td><td>React Router v6</td><td>Client-side navigation</td></tr>
+  <tr><td>Backend</td><td>Firebase JS SDK v9+</td><td>Modular, tree-shakable SDK</td></tr>
+  <tr><td>Hosting</td><td>Firebase Hosting</td><td>Free SSL, CDN, custom domain</td></tr>
+  <tr><td>Icons</td><td>Lucide React</td><td>Modern icon library</td></tr>
+  <tr><td>Dates</td><td>date-fns</td><td>Lightweight date utilities</td></tr>
+</table>
+
+<!-- 4. DATA MODEL -->
+<div class="page-break"></div>
+<h2 id="data-model">4. Data Model</h2>
+<p>Shared Firestore collections used by both Android and Web applications.</p>
+
+<h3>4.1 Users Collection — <code>users/{userId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>uid</td><td>String</td><td>Firebase Auth UID</td></tr>
+  <tr><td>displayName</td><td>String</td><td>Full name</td></tr>
+  <tr><td>email</td><td>String</td><td>Email address</td></tr>
+  <tr><td>photoUrl</td><td>String</td><td>Profile photo (Firebase Storage)</td></tr>
+  <tr><td>university</td><td>String</td><td>University name</td></tr>
+  <tr><td>bio</td><td>String</td><td>Short biography</td></tr>
+  <tr><td>skillsTeach</td><td>Array&lt;String&gt;</td><td>Skills user can teach</td></tr>
+  <tr><td>skillsLearn</td><td>Array&lt;String&gt;</td><td>Skills user wants to learn</td></tr>
+  <tr><td>credits</td><td>Integer</td><td>Current credit balance</td></tr>
+  <tr><td>rating</td><td>Double</td><td>Average rating (1-5)</td></tr>
+  <tr><td>totalSessions</td><td>Integer</td><td>Completed sessions count</td></tr>
+  <tr><td>joinedAt</td><td>Timestamp</td><td>Registration date</td></tr>
+  <tr><td>isOnline</td><td>Boolean</td><td>Online status</td></tr>
+</table>
+
+<h3>4.2 Matches Collection — <code>matches/{matchId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>id</td><td>String</td><td>Auto-generated ID</td></tr>
+  <tr><td>user1Id</td><td>String</td><td>First user UID</td></tr>
+  <tr><td>user2Id</td><td>String</td><td>Second user UID</td></tr>
+  <tr><td>user1Teaches</td><td>String</td><td>Skill user1 teaches user2</td></tr>
+  <tr><td>user2Teaches</td><td>String</td><td>Skill user2 teaches user1</td></tr>
+  <tr><td>status</td><td>String</td><td>pending / accepted / declined</td></tr>
+  <tr><td>createdAt</td><td>Timestamp</td><td>When match was created</td></tr>
+</table>
+
+<h3>4.3 Sessions Collection — <code>sessions/{sessionId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>id</td><td>String</td><td>Auto-generated ID</td></tr>
+  <tr><td>matchId</td><td>String</td><td>Related match</td></tr>
+  <tr><td>teacherId</td><td>String</td><td>User teaching</td></tr>
+  <tr><td>learnerId</td><td>String</td><td>User learning</td></tr>
+  <tr><td>skill</td><td>String</td><td>Skill being taught</td></tr>
+  <tr><td>scheduledAt</td><td>Timestamp</td><td>Date and time</td></tr>
+  <tr><td>durationMinutes</td><td>Integer</td><td>30 / 60 / 90</td></tr>
+  <tr><td>teamsLink</td><td>String</td><td>Microsoft Teams URL</td></tr>
+  <tr><td>status</td><td>String</td><td>scheduled / completed / cancelled</td></tr>
+  <tr><td>creditsExchanged</td><td>Integer</td><td>Credits transferred</td></tr>
+</table>
+
+<h3>4.4 Chat — <code>chatRooms/{roomId}/messages/{msgId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>senderId</td><td>String</td><td>Message sender UID</td></tr>
+  <tr><td>text</td><td>String</td><td>Message content</td></tr>
+  <tr><td>imageUrl</td><td>String?</td><td>Optional image attachment</td></tr>
+  <tr><td>timestamp</td><td>Timestamp</td><td>Sent time</td></tr>
+  <tr><td>isRead</td><td>Boolean</td><td>Read status</td></tr>
+</table>
+
+<h3>4.5 Comments — <code>sessions/{sessionId}/comments/{commentId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>userId</td><td>String</td><td>Commenter UID</td></tr>
+  <tr><td>userName</td><td>String</td><td>Display name</td></tr>
+  <tr><td>text</td><td>String</td><td>Review text</td></tr>
+  <tr><td>rating</td><td>Integer</td><td>1-5 star rating</td></tr>
+  <tr><td>timestamp</td><td>Timestamp</td><td>Posted time</td></tr>
+</table>
+
+<h3>4.6 Credit Transactions — <code>creditTransactions/{txId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>userId</td><td>String</td><td>User involved</td></tr>
+  <tr><td>amount</td><td>Integer</td><td>+ earned / - spent</td></tr>
+  <tr><td>type</td><td>String</td><td>earned_teaching / spent_learning / welcome_bonus</td></tr>
+  <tr><td>sessionId</td><td>String</td><td>Related session</td></tr>
+  <tr><td>timestamp</td><td>Timestamp</td><td>Transaction time</td></tr>
+</table>
+
+<h3>4.7 Universities — <code>universities/{uniId}</code></h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td>name</td><td>String</td><td>University of Cape Town</td></tr>
+  <tr><td>domain</td><td>String</td><td>uct.ac.za</td></tr>
+  <tr><td>logoUrl</td><td>String</td><td>University logo</td></tr>
+  <tr><td>totalUsers</td><td>Integer</td><td>Registered user count</td></tr>
+</table>
+
+<!-- 5. FEATURES -->
+<div class="page-break"></div>
+<h2 id="features">5. Core Features</h2>
+
+<h3>5.1 Authentication</h3>
+<ul>
+  <li>Email/password registration and login</li>
+  <li>Google Sign-In (optional enhancement)</li>
+  <li>Password reset via email</li>
+  <li>Session persistence across app restarts</li>
+</ul>
+
+<h3>5.2 Profile Management</h3>
+<ul>
+  <li>Profile photo upload (Firebase Storage)</li>
+  <li>Add/remove skills to teach and learn</li>
+  <li>University selection from predefined list</li>
+  <li>Bio and contact information</li>
+</ul>
+
+<h3>5.3 Skill Matching</h3>
+<ul>
+  <li>Automatic matching based on complementary skills</li>
+  <li>Scoring algorithm considering skill overlap, university, and rating</li>
+  <li>Send/accept/decline swap requests</li>
+  <li>Match suggestions on home screen</li>
+</ul>
+
+<h3>5.4 Session Management</h3>
+<ul>
+  <li>Schedule sessions with date, time, and duration</li>
+  <li>Attach Microsoft Teams meeting links</li>
+  <li>Session status tracking (scheduled → completed)</li>
+  <li>Automatic credit transfer on completion</li>
+</ul>
+
+<h3>5.5 Real-time Chat</h3>
+<ul>
+  <li>One-on-one messaging with matched users</li>
+  <li>Real-time delivery via Firestore listeners</li>
+  <li>Image sharing support</li>
+  <li>Unread message indicators</li>
+</ul>
+
+<h3>5.6 Credit System</h3>
+<table>
+  <tr><th>Action</th><th>Credits</th></tr>
+  <tr><td>Welcome bonus (new user)</td><td>+50</td></tr>
+  <tr><td>Complete a teaching session</td><td>+10</td></tr>
+  <tr><td>Book a learning session</td><td>-10</td></tr>
+  <tr><td>Receive a 5-star review</td><td>+5 bonus</td></tr>
+</table>
+
+<h3>5.7 Comments & Reviews</h3>
+<ul>
+  <li>Post-session reviews with 1-5 star rating</li>
+  <li>Text comments visible on session and profile</li>
+  <li>Average rating calculated and displayed</li>
+</ul>
+
+<h3>5.8 Multi-University Support</h3>
+<ul>
+  <li>University selection during registration</li>
+  <li>Filter matches by university or all universities</li>
+  <li>University leaderboard and statistics</li>
+</ul>
+
+<!-- 6. ANDROID -->
+<div class="page-break"></div>
+<h2 id="android">6. Android Application (Kotlin)</h2>
+
+<h3>6.1 Project Structure</h3>
+<pre>
+com.eduswap.app/
+├── di/                     # Hilt modules
+│   └── AppModule.kt
+├── data/
+│   ├── model/              # Data classes (User, Session, etc.)
+│   └── repository/         # Firebase repositories
+│       ├── AuthRepository.kt
+│       ├── UserRepository.kt
+│       ├── MatchRepository.kt
+│       ├── SessionRepository.kt
+│       ├── ChatRepository.kt
+│       └── CreditRepository.kt
+├── domain/usecase/         # Business logic
+│   ├── auth/               # Login, SignUp, Logout
+│   ├── matching/           # FindMatches
+│   ├── session/            # Schedule, Complete
+│   └── credits/            # Earn, Spend
+├── ui/
+│   ├── theme/              # Material 3 theme
+│   ├── navigation/         # NavGraph, Screen routes
+│   ├── auth/               # Login, SignUp screens
+│   ├── home/               # Home screen
+│   ├── explore/            # Browse skills
+│   ├── matches/            # Match list & detail
+│   ├── sessions/           # Session scheduling
+│   ├── chat/               # Chat list & conversation
+│   ├── profile/            # Profile & edit
+│   └── components/         # Reusable composables
+├── util/                   # Helpers (TeamsLinkHelper)
+└── EduSwapApp.kt           # @HiltAndroidApp
+</pre>
+
+<h3>6.2 Key Dependencies (build.gradle.kts)</h3>
+<pre>
+// Jetpack Compose BOM
+implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+implementation("androidx.compose.material3:material3")
+implementation("androidx.compose.ui:ui")
+
+// Navigation
+implementation("androidx.navigation:navigation-compose:2.8.5")
+
+// Firebase BOM
+implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+implementation("com.google.firebase:firebase-auth-ktx")
+implementation("com.google.firebase:firebase-firestore-ktx")
+implementation("com.google.firebase:firebase-storage-ktx")
+implementation("com.google.firebase:firebase-messaging-ktx")
+
+// Hilt
+implementation("com.google.dagger:hilt-android:2.51.1")
+kapt("com.google.dagger:hilt-compiler:2.51.1")
+
+// Coil (images)
+implementation("io.coil-kt:coil-compose:2.7.0")
+
+// Coroutines
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+</pre>
+
+<h3>6.3 Navigation Structure</h3>
+<pre>
+Auth Flow (no bottom nav):
+  ├── LoginScreen
+  └── SignUpScreen
+
+Main Flow (bottom nav):
+  ├── 🏠 Home
+  ├── 🔍 Explore → SkillDetail
+  ├── 🤝 Matches → MatchDetail
+  ├── 💬 Chat → Conversation
+  └── 👤 Profile → EditProfile
+          └── Sessions → ScheduleSession
+</pre>
+
+<!-- 7. WEB -->
+<div class="page-break"></div>
+<h2 id="web">7. Web Application (React)</h2>
+
+<h3>7.1 Project Structure</h3>
+<pre>
+eduswap-web/
+├── public/
+│   └── index.html
+├── src/
+│   ├── components/           # Reusable UI components
+│   │   ├── Navbar.tsx
+│   │   ├── SkillChip.tsx
+│   │   ├── UserCard.tsx
+│   │   ├── SessionCard.tsx
+│   │   ├── CreditBadge.tsx
+│   │   ├── CommentSection.tsx
+│   │   ├── RatingStars.tsx
+│   │   └── LoadingSpinner.tsx
+│   ├── pages/                # Route-level pages
+│   │   ├── LoginPage.tsx
+│   │   ├── SignUpPage.tsx
+│   │   ├── HomePage.tsx
+│   │   ├── ExplorePage.tsx
+│   │   ├── MatchesPage.tsx
+│   │   ├── SessionsPage.tsx
+│   │   ├── ChatPage.tsx
+│   │   └── ProfilePage.tsx
+│   ├── context/              # React Context providers
+│   │   ├── AuthContext.tsx
+│   │   └── ThemeContext.tsx
+│   ├── hooks/                # Custom hooks
+│   │   ├── useAuth.ts
+│   │   ├── useFirestore.ts
+│   │   └── useChat.ts
+│   ├── services/             # Firebase service modules
+│   │   ├── firebase.ts       # Firebase init
+│   │   ├── authService.ts
+│   │   ├── userService.ts
+│   │   ├── matchService.ts
+│   │   ├── sessionService.ts
+│   │   ├── chatService.ts
+│   │   └── creditService.ts
+│   ├── types/                # TypeScript interfaces
+│   │   └── index.ts
+│   ├── styles/               # CSS Modules
+│   │   ├── global.css
+│   │   ├── variables.css
+│   │   └── [page].module.css
+│   ├── utils/
+│   │   └── teamsHelper.ts
+│   ├── App.tsx
+│   └── main.tsx
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+</pre>
+
+<h3>7.2 Key Dependencies (package.json)</h3>
+<pre>
+{
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-router-dom": "^6.28.0",
+    "firebase": "^11.1.0",
+    "lucide-react": "^0.468.0",
+    "date-fns": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "@types/react": "^18.3.0"
+  }
+}
+</pre>
+
+<h3>7.3 Web-Specific Features</h3>
+<ul>
+  <li><strong>Responsive design</strong> — Desktop, tablet, and mobile layouts</li>
+  <li><strong>Dark/light mode</strong> — Toggle with system preference detection</li>
+  <li><strong>SEO</strong> — Meta tags, semantic HTML, Open Graph</li>
+  <li><strong>PWA-ready</strong> — Service worker for offline capability</li>
+  <li><strong>Firebase Hosting</strong> — Deploy with <code>firebase deploy</code></li>
+</ul>
+
+<!-- 8. API -->
+<div class="page-break"></div>
+<h2 id="api">8. API Endpoints (Firebase Operations)</h2>
+<p>Since Firebase is the backend, "endpoints" are Firestore operations wrapped in repository methods. Both platforms use identical operations.</p>
+
+<h3>Authentication</h3>
+<table>
+  <tr><th>Operation</th><th>Method</th><th>Description</th></tr>
+  <tr><td>Sign Up</td><td>createUserWithEmailAndPassword()</td><td>Create account + Firestore user doc</td></tr>
+  <tr><td>Login</td><td>signInWithEmailAndPassword()</td><td>Authenticate user</td></tr>
+  <tr><td>Google Sign-In</td><td>signInWithCredential()</td><td>OAuth with Google</td></tr>
+  <tr><td>Logout</td><td>signOut()</td><td>Clear session</td></tr>
+  <tr><td>Get Current User</td><td>auth.currentUser</td><td>Returns logged-in user</td></tr>
+</table>
+
+<h3>Users</h3>
+<table>
+  <tr><th>Operation</th><th>Firestore Path</th><th>Description</th></tr>
+  <tr><td>Get Profile</td><td>users/{uid} — get()</td><td>Fetch user profile</td></tr>
+  <tr><td>Update Profile</td><td>users/{uid} — update()</td><td>Edit skills, bio, photo</td></tr>
+  <tr><td>Search Users</td><td>users — where() query</td><td>Find by skill or university</td></tr>
+</table>
+
+<h3>Matches</h3>
+<table>
+  <tr><th>Operation</th><th>Firestore Path</th><th>Description</th></tr>
+  <tr><td>Find Matches</td><td>users — array-contains query</td><td>Find complementary users</td></tr>
+  <tr><td>Send Request</td><td>matches — add()</td><td>Create pending match</td></tr>
+  <tr><td>Accept/Decline</td><td>matches/{id} — update()</td><td>Update match status</td></tr>
+  <tr><td>List My Matches</td><td>matches — where(userId)</td><td>Get user's matches</td></tr>
+</table>
+
+<h3>Sessions</h3>
+<table>
+  <tr><th>Operation</th><th>Firestore Path</th><th>Description</th></tr>
+  <tr><td>Schedule</td><td>sessions — add()</td><td>Create session with Teams link</td></tr>
+  <tr><td>Get Upcoming</td><td>sessions — where(status, date)</td><td>User's scheduled sessions</td></tr>
+  <tr><td>Complete</td><td>sessions/{id} — update()</td><td>Mark done + transfer credits</td></tr>
+  <tr><td>Cancel</td><td>sessions/{id} — update()</td><td>Cancel session</td></tr>
+</table>
+
+<h3>Chat</h3>
+<table>
+  <tr><th>Operation</th><th>Firestore Path</th><th>Description</th></tr>
+  <tr><td>Get Rooms</td><td>chatRooms — where(userId)</td><td>List user's chat rooms</td></tr>
+  <tr><td>Send Message</td><td>chatRooms/{id}/messages — add()</td><td>Post a message</td></tr>
+  <tr><td>Listen</td><td>chatRooms/{id}/messages — onSnapshot()</td><td>Real-time listener</td></tr>
+</table>
+
+<!-- 9. MATCHING -->
+<h2 id="matching">9. Matching Algorithm</h2>
+<pre>
+FUNCTION findMatches(currentUser):
+  candidates = []
+
+  // Step 1: Find users whose skillsTeach intersects currentUser.skillsLearn
+  potentialTeachers = query users WHERE skillsTeach array-contains-any currentUser.skillsLearn
+
+  // Step 2: Filter for reciprocal match
+  FOR each teacher IN potentialTeachers:
+    IF teacher.skillsLearn intersects currentUser.skillsTeach:
+      matchScore = calculateScore(currentUser, teacher)
+      candidates.add({user: teacher, score: matchScore})
+
+  // Step 3: Sort by score descending
+  RETURN candidates.sortByDescending(score)
+
+FUNCTION calculateScore(userA, userB):
+  score = 0
+  score += countOverlap(userA.skillsTeach, userB.skillsLearn) * 30   // Skill relevance
+  score += countOverlap(userB.skillsTeach, userA.skillsLearn) * 30   // Reciprocal relevance
+  IF userA.university == userB.university: score += 20                // Same university bonus
+  score += userB.rating * 4                                           // Rating bonus (max 20)
+  RETURN score
+</pre>
+
+<!-- 10. CREDITS -->
+<h2 id="credits">10. Credit System</h2>
+<pre>
+ON session_completed(session):
+  // Teacher earns credits
+  teacher.credits += session.creditsExchanged
+  log CreditTransaction(userId=teacher, amount=+10, type="earned_teaching")
+
+  // Learner spends credits
+  learner.credits -= session.creditsExchanged
+  log CreditTransaction(userId=learner, amount=-10, type="spent_learning")
+
+ON user_registered(user):
+  user.credits = 50
+  log CreditTransaction(userId=user, amount=+50, type="welcome_bonus")
+
+ON review_posted(review):
+  IF review.rating == 5:
+    teacher.credits += 5
+    log CreditTransaction(userId=teacher, amount=+5, type="five_star_bonus")
+</pre>
+
+<!-- 11. TEAMS -->
+<h2 id="teams">11. Microsoft Teams Integration</h2>
+
+<h3>How It Works</h3>
+<ol>
+  <li>When scheduling a session, the teacher creates a Teams meeting (via Teams app or Outlook)</li>
+  <li>They paste the meeting URL into EduSwap's session form</li>
+  <li>The link is stored in Firestore with the session</li>
+  <li>Both users see a <strong>"Join on Teams"</strong> button on the session card</li>
+</ol>
+
+<h3>Android Implementation</h3>
+<pre>
+fun openTeamsLink(context: Context, teamsUrl: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(teamsUrl))
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        // Fallback: open in browser
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(teamsUrl))
+        context.startActivity(browserIntent)
+    }
+}
+</pre>
+
+<h3>Web Implementation</h3>
+<pre>
+function openTeamsLink(teamsUrl: string): void {
+  window.open(teamsUrl, '_blank');
+}
+</pre>
+
+<div class="info-box">
+  <strong>URL Format:</strong> Teams meeting links follow the pattern:<br>
+  <code>https://teams.microsoft.com/l/meetup-join/...</code><br>
+  The app validates this format before saving.
+</div>
+
+<!-- 12. SCREENS -->
+<div class="page-break"></div>
+<h2 id="screens">12. Application Screens</h2>
+<p>Both Android and Web share the same screen set (adapted for each platform).</p>
+
+<div class="screen-grid">
+  <div class="screen-item"><div class="icon">🔐</div>Login</div>
+  <div class="screen-item"><div class="icon">📝</div>Sign Up</div>
+  <div class="screen-item"><div class="icon">🏠</div>Home / Dashboard</div>
+  <div class="screen-item"><div class="icon">🔍</div>Explore Skills</div>
+  <div class="screen-item"><div class="icon">📋</div>Skill Detail</div>
+  <div class="screen-item"><div class="icon">🤝</div>Matches List</div>
+  <div class="screen-item"><div class="icon">👥</div>Match Detail</div>
+  <div class="screen-item"><div class="icon">📅</div>Sessions List</div>
+  <div class="screen-item"><div class="icon">⏰</div>Schedule Session</div>
+  <div class="screen-item"><div class="icon">💬</div>Chat List</div>
+  <div class="screen-item"><div class="icon">🗨️</div>Conversation</div>
+  <div class="screen-item"><div class="icon">👤</div>Profile</div>
+  <div class="screen-item"><div class="icon">✏️</div>Edit Profile</div>
+  <div class="screen-item"><div class="icon">⭐</div>Reviews</div>
+  <div class="screen-item"><div class="icon">💰</div>Credit History</div>
+  <div class="screen-item"><div class="icon">🏫</div>University View</div>
+</div>
+
+<!-- 13. PHASES -->
+<div class="page-break"></div>
+<h2 id="phases">13. Development Phases</h2>
+
+<div class="phase-header"><span>Phase 1 — Authentication & Profile</span><span>Week 1</span></div>
+<ul>
+  <li>Firebase project setup + <code>google-services.json</code></li>
+  <li>Login and Sign Up screens (Android + Web)</li>
+  <li>Profile creation with university selection</li>
+  <li>Add skills to teach and learn</li>
+  <li>Profile photo upload</li>
+</ul>
+
+<div class="phase-header"><span>Phase 2 — Skill Matching</span><span>Week 2</span></div>
+<ul>
+  <li>Implement matching algorithm</li>
+  <li>Explore screen with skill browsing</li>
+  <li>Match suggestions on home screen</li>
+  <li>Send/accept/decline swap requests</li>
+</ul>
+
+<div class="phase-header"><span>Phase 3 — Sessions & Teams</span><span>Week 2-3</span></div>
+<ul>
+  <li>Session scheduling form</li>
+  <li>Teams link integration and validation</li>
+  <li>"Join on Teams" deep link button</li>
+  <li>Session status management</li>
+</ul>
+
+<div class="phase-header"><span>Phase 4 — Credit System</span><span>Week 3</span></div>
+<ul>
+  <li>Welcome bonus on registration</li>
+  <li>Credit transfer on session completion</li>
+  <li>Transaction history view</li>
+  <li>Credit balance badge in navigation</li>
+</ul>
+
+<div class="phase-header"><span>Phase 5 — Real-time Chat</span><span>Week 3-4</span></div>
+<ul>
+  <li>Chat room creation on match acceptance</li>
+  <li>Real-time messaging with Firestore</li>
+  <li>Image attachment support</li>
+  <li>Unread message indicators</li>
+</ul>
+
+<div class="phase-header"><span>Phase 6 — Comments & Reviews</span><span>Week 4</span></div>
+<ul>
+  <li>Post-session review form (stars + text)</li>
+  <li>Comment section on sessions</li>
+  <li>Average rating on user profiles</li>
+</ul>
+
+<div class="phase-header"><span>Phase 7 — Multi-University</span><span>Week 4</span></div>
+<ul>
+  <li>University collection and seeding</li>
+  <li>Filter by university on explore</li>
+  <li>University statistics and leaderboard</li>
+</ul>
+
+<div class="phase-header"><span>Phase 8 — Polish & Deploy</span><span>Week 5</span></div>
+<ul>
+  <li>UI polish, animations, loading states</li>
+  <li>Error handling and edge cases</li>
+  <li>Deploy web app to Firebase Hosting</li>
+  <li>Generate APK for Android</li>
+  <li>Prepare demo data and presentation</li>
+</ul>
+
+<!-- 14. TESTING -->
+<div class="page-break"></div>
+<h2 id="testing">14. Testing & Verification</h2>
+
+<h3>14.1 Unit Tests</h3>
+<table>
+  <tr><th>Test Area</th><th>What to Test</th></tr>
+  <tr><td>Matching Algorithm</td><td>Returns correct matches for complementary skills</td></tr>
+  <tr><td>Credit Calculation</td><td>Credits earned/spent correctly, no negative balance</td></tr>
+  <tr><td>Teams URL Validation</td><td>Accepts valid Teams URLs, rejects invalid ones</td></tr>
+  <tr><td>Rating Calculation</td><td>Average rating computed correctly from reviews</td></tr>
+</table>
+
+<h3>14.2 Integration Tests</h3>
+<table>
+  <tr><th>Test Flow</th><th>Steps</th></tr>
+  <tr><td>Registration</td><td>Sign up → profile created in Firestore → welcome credits added</td></tr>
+  <tr><td>Match & Session</td><td>Find match → accept → schedule → complete → credits transfer</td></tr>
+  <tr><td>Chat</td><td>Send message → appears in real-time for both users</td></tr>
+</table>
+
+<h3>14.3 Manual Testing Checklist</h3>
+<ul>
+  <li>☐ Create 2 test accounts with complementary skills</li>
+  <li>☐ Verify matching algorithm suggests them to each other</li>
+  <li>☐ Accept match, schedule session with Teams link</li>
+  <li>☐ Verify Teams link opens correctly (Android intent / web tab)</li>
+  <li>☐ Complete session, verify credits transferred</li>
+  <li>☐ Leave review, verify rating updates on profile</li>
+  <li>☐ Chat between users, verify real-time delivery</li>
+  <li>☐ Test with different universities, verify filtering</li>
+  <li>☐ Test on Android emulator + physical device</li>
+  <li>☐ Test web on Chrome, Firefox, Safari, mobile browser</li>
+</ul>
+
+<!-- 15. DEPLOYMENT -->
+<h2 id="deployment">15. Deployment Strategy</h2>
+
+<div class="two-col">
+  <div class="col-card">
+    <h4>📱 Android</h4>
+    <ol>
+      <li>Generate signed APK via Android Studio</li>
+      <li>Test on physical device</li>
+      <li>Optional: publish to Google Play (requires developer account, $25 fee)</li>
+      <li>For demo: install APK directly on test device</li>
+    </ol>
+  </div>
+  <div class="col-card">
+    <h4>🌐 Web</h4>
+    <ol>
+      <li>Build: <code>npm run build</code></li>
+      <li>Deploy: <code>firebase deploy</code></li>
+      <li>Free SSL + CDN via Firebase Hosting</li>
+      <li>Custom domain available (optional)</li>
+    </ol>
+  </div>
+</div>
+
+<div class="warning-box">
+  <strong>Before Deployment:</strong>
+  <ul>
+    <li>Set Firestore security rules (restrict read/write to authenticated users)</li>
+    <li>Enable only required Firebase Auth providers</li>
+    <li>Test all features with production Firebase project</li>
+  </ul>
+</div>
+
+<br><br>
+<hr>
+<p style="text-align:center; color: var(--gray); font-size: 9pt;">
+  EduSwap Implementation Plan v1.0 — Generated March 2026<br>
+  Final Year Project — Computer Science (Application Development)
+</p>
+
+</div>
+
+<!-- PRINT BUTTON -->
+<button class="print-btn no-print" onclick="window.print()">📄 Save as PDF</button>
+
+</body>
+</html>

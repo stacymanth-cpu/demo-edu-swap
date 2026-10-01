@@ -1,0 +1,27 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ],
+    "method": [
+      "GET",
+      "HEAD",
+      "POST",
+      "PUT"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "X-Goog-Upload-Protocol",
+      "X-Goog-Upload-Command",
+      "X-Goog-Upload-Offset",
+      "X-Goog-Upload-Header-Content-Type",
+      "X-Goog-Upload-Header-Content-Length",
+      "X-Goog-Upload-URL",
+      "X-Firebase-Storage-Version",
+      "X-Firebase-GMPID"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

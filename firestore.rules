@@ -1,0 +1,416 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Set this custom claim with the Firebase Admin SDK. The users.isAdmin
+    // field is deliberately not trusted for authorization.
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isUser(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isParticipant(data) {
+      return signedIn() && data.participants.hasAny([request.auth.uid]);
+    }
+
+    function isSessionParticipant(data) {
+      return signedIn() && (data.teacherId == request.auth.uid || data.learnerId == request.auth.uid);
+    }
+
+    function isMatchParticipant(data) {
+      return signedIn() && (data.user1Id == request.auth.uid || data.user2Id == request.auth.uid);
+    }
+
+    // True when matchId is an accepted match between users a and b (in either order).
+    function acceptedMatchBetween(matchId, a, b) {
+      let skillMatch = get(/databases/$(database)/documents/matches/$(matchId)).data;
+      return skillMatch.status == 'accepted'
+        && ((skillMatch.user1Id == a && skillMatch.user2Id == b) || (skillMatch.user1Id == b && skillMatch.user2Id == a));
+    }
+
+    // True when sessionId is a completed session between users a and b (in either order).
+    function completedSessionBetween(sessionId, a, b) {
+      let session = get(/databases/$(database)/documents/sessions/$(sessionId)).data;
+      return session.status == 'completed'
+        && ((session.teacherId == a && session.learnerId == b) || (session.teacherId == b && session.learnerId == a));
+    }
+
+    function publicProfileMatchesUser(userId) {
+      let user = getAfter(/databases/$(database)/documents/users/$(userId)).data;
+      let profile = request.resource.data;
+      return profile.keys().hasOnly([
+          'uid', 'displayName', 'photoUrl', 'university', 'bio',
+          'skillsTeach', 'skillsLearn', 'rating', 'totalSessions', 'joinedAt',
+          'isOnline', 'lastSeen', 'availability', 'verifiedSkills',
+          'studentVerified', 'accountStatus', 'skillLevels',
+          'introductionVideoUrl', 'introductionVideoVisibility', 'learningGoals',
+          'preferredTeachingStyle', 'languages', 'sessionPreference', 'weeklyAvailability'
+        ])
+        && profile.get('uid', null) == userId
+        && profile.get('displayName', null) == user.get('displayName', null)
+        && profile.get('photoUrl', null) == user.get('photoUrl', null)
+        && profile.get('university', null) == user.get('university', null)
+        && profile.get('bio', null) == user.get('bio', null)
+        && profile.get('skillsTeach', null) == user.get('skillsTeach', null)
+        && profile.get('skillsLearn', null) == user.get('skillsLearn', null)
+        && profile.get('rating', null) == user.get('rating', null)
+        && profile.get('totalSessions', null) == user.get('totalSessions', null)
+        && profile.get('joinedAt', null) == user.get('joinedAt', null)
+        && profile.get('isOnline', null) == user.get('isOnline', null)
+        && profile.get('lastSeen', null) == user.get('lastSeen', null)
+        && profile.get('availability', null) == user.get('availability', null)
+        && profile.get('verifiedSkills', null) == user.get('verifiedSkills', null)
+        && profile.get('studentVerified', null) == user.get('studentVerified', null)
+        && profile.get('accountStatus', null) == user.get('accountStatus', null)
+        && profile.get('skillLevels', null) == user.get('skillLevels', null)
+        && profile.get('introductionVideoUrl', null) == (
+          user.get('introductionVideoVisibility', 'members') == 'members'
+            ? user.get('introductionVideoUrl', null)
+            : null
+        )
+        && profile.get('introductionVideoVisibility', null) == user.get('introductionVideoVisibility', null)
+        && profile.get('learningGoals', null) == user.get('learningGoals', null)
+        && profile.get('preferredTeachingStyle', null) == user.get('preferredTeachingStyle', null)
+        && profile.get('languages', null) == user.get('languages', null)
+        && profile.get('sessionPreference', null) == user.get('sessionPreference', null)
+        && profile.get('weeklyAvailability', null) == user.get('weeklyAvailability', null);
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || isUser(userId);
+      allow create: if isUser(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.credits == 50
+        && request.resource.data.get('isAdmin', false) != true
+        && request.resource.data.get('studentVerified', false) == false
+        && !request.resource.data.keys().hasAny(['registrationDocumentUrl', 'registrationDocumentPath']);
+      allow update: if isAdmin()
+        || (isUser(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'displayName', 'firstName', 'lastName', 'mobileNumber', 'photoUrl',
+            'university', 'bio', 'skillsTeach', 'skillsLearn', 'skillLevels',
+            'learningGoals', 'preferredTeachingStyle', 'languages',
+            'sessionPreference', 'savedUserIds', 'hiddenUserIds', 'blockedUserIds',
+            'introductionVideoUrl', 'introductionVideoVisibility',
+            'isOnline', 'lastSeen', 'availability',
+            'registrationVerificationStatus', 'studentVerified', 'weeklyAvailability'
+          ])
+          && (request.resource.data.get('registrationVerificationStatus', 'not_submitted') == resource.data.get('registrationVerificationStatus', 'not_submitted')
+            || request.resource.data.get('registrationVerificationStatus', 'not_submitted') == 'pending')
+          && (request.resource.data.get('studentVerified', false) == resource.data.get('studentVerified', false)
+            || (request.resource.data.get('studentVerified', false) == false
+              && request.resource.data.get('registrationVerificationStatus', 'not_submitted') == 'pending')));
+      allow delete: if isAdmin();
+    }
+
+    match /publicProfiles/{userId} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        || (isUser(userId) && publicProfileMatchesUser(userId));
+      allow delete: if isAdmin();
+    }
+
+    // Legacy uploads point at Firebase Storage (storagePath). New uploads keep the file in
+    // Firestore as base64 chunks (see src/lib/firestore/registration.ts) so the project can
+    // stay on the Spark plan. Only the student writes and only admins read.
+    function isStorageRegistration(data, userId) {
+      return data.keys().hasOnly(['storagePath', 'updatedAt'])
+        && data.storagePath is string
+        && data.storagePath.matches('registrationDocuments/' + userId + '/.*')
+        && data.updatedAt is timestamp;
+    }
+
+    function isFirestoreRegistration(data) {
+      return data.keys().hasOnly(['storage', 'fileName', 'contentType', 'size', 'chunkCount', 'updatedAt'])
+        && data.storage == 'firestore'
+        && data.fileName is string && data.fileName.size() <= 200
+        && data.contentType in ['application/pdf', 'image/jpeg', 'image/png']
+        && data.size is int && data.size > 0 && data.size <= 5 * 1024 * 1024
+        && data.chunkCount is int && data.chunkCount >= 1 && data.chunkCount <= 10
+        && data.updatedAt is timestamp;
+    }
+
+    match /privateRegistrationDocuments/{userId} {
+      allow read: if isAdmin();
+      allow create, update: if isUser(userId)
+        && (isStorageRegistration(request.resource.data, userId) || isFirestoreRegistration(request.resource.data));
+      allow delete: if isAdmin();
+
+      match /chunks/{chunkId} {
+        allow read: if isAdmin();
+        allow create, update: if isUser(userId)
+          && request.resource.data.keys().hasOnly(['index', 'data'])
+          && request.resource.data.index is int
+          && request.resource.data.index >= 0 && request.resource.data.index < 10
+          && chunkId == string(request.resource.data.index)
+          && request.resource.data.data is string
+          && request.resource.data.data.size() <= 700000;
+        allow delete: if isAdmin() || isUser(userId);
+      }
+    }
+
+    match /matches/{matchId} {
+      allow read: if isAdmin() || isMatchParticipant(resource.data);
+      allow create: if signedIn()
+        && request.resource.data.user1Id == request.auth.uid
+        && request.resource.data.user1Id != request.resource.data.user2Id
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin()
+        || (isMatchParticipant(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'meetingLink'])
+          && request.resource.data.user1Id == resource.data.user1Id
+          && request.resource.data.user2Id == resource.data.user2Id
+          && (request.resource.data.status == resource.data.status
+            || (resource.data.status == 'pending'
+              && (request.resource.data.status == 'declined'
+                || (request.resource.data.status == 'accepted' && request.auth.uid == resource.data.user2Id)))));
+      allow delete: if isAdmin();
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isAdmin() || isSessionParticipant(resource.data);
+      // A session must come from an accepted match and start in the future.
+      // Without this, a user could invent a past session with anyone and then
+      // complete it to move that person's credits.
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && (request.resource.data.teacherId == request.auth.uid || request.resource.data.learnerId == request.auth.uid)
+        && request.resource.data.teacherId != request.resource.data.learnerId
+        && request.resource.data.status == 'scheduled'
+        && request.resource.data.scheduledAt is timestamp
+        && request.resource.data.scheduledAt > request.time
+        && request.resource.data.creditsExchanged is int
+        && request.resource.data.creditsExchanged > 0
+        && request.resource.data.matchId is string
+        && acceptedMatchBetween(request.resource.data.matchId, request.resource.data.teacherId, request.resource.data.learnerId);
+      allow update: if isAdmin()
+        || (isSessionParticipant(resource.data)
+          // Status changes (complete/cancel) go through the completeSession and
+          // cancelSession Cloud Functions, which use the Admin SDK.
+          && resource.data.status == 'scheduled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'meetingLink', 'scheduledAt', 'notes',
+            'beforeSessionChecklist', 'rescheduledFrom'
+          ])
+          && request.resource.data.teacherId == resource.data.teacherId
+          && request.resource.data.learnerId == resource.data.learnerId
+          && request.resource.data.creditsExchanged == resource.data.creditsExchanged
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['scheduledAt'])
+            || (request.resource.data.scheduledAt is timestamp && request.resource.data.scheduledAt > request.time)));
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      // Credit balances and their ledger must only be written by a trusted
+      // callable function or Admin SDK, never by the browser.
+      allow write: if isAdmin();
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if isAdmin() || isParticipant(resource.data);
+      allow create: if signedIn()
+        && request.resource.data.participants.size() == 2
+        && request.resource.data.participants.hasAny([request.auth.uid])
+        && request.resource.data.matchId is string
+        && acceptedMatchBetween(request.resource.data.matchId,
+          request.resource.data.participants[0], request.resource.data.participants[1]);
+      allow update: if isAdmin()
+        || (isParticipant(resource.data)
+          && request.resource.data.participants == resource.data.participants
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastMessage', 'lastMessageAt', 'unreadCount', 'typingBy'
+          ]));
+      allow delete: if isAdmin();
+
+      // Shared chat files stored as base64 chunks (no Firebase Storage on the Spark plan).
+      // Chunks are written first, then the parent document describing the file.
+      match /files/{fileId} {
+        allow read: if isAdmin() || isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data);
+        allow create: if isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data)
+          && request.resource.data.keys().hasOnly(['uploaderId', 'fileName', 'contentType', 'size', 'chunkCount', 'createdAt'])
+          && request.resource.data.uploaderId == request.auth.uid
+          && request.resource.data.fileName is string && request.resource.data.fileName.size() <= 200
+          && request.resource.data.contentType is string && request.resource.data.contentType.size() <= 120
+          && request.resource.data.size is int && request.resource.data.size > 0 && request.resource.data.size <= 10 * 1024 * 1024
+          && request.resource.data.chunkCount is int && request.resource.data.chunkCount >= 1 && request.resource.data.chunkCount <= 20
+          && request.resource.data.createdAt is timestamp;
+        allow update, delete: if isAdmin();
+
+        match /chunks/{chunkId} {
+          allow read: if isAdmin() || isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data);
+          allow create: if isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data)
+            && request.resource.data.keys().hasOnly(['index', 'data'])
+            && request.resource.data.index is int
+            && request.resource.data.index >= 0 && request.resource.data.index < 20
+            && chunkId == string(request.resource.data.index)
+            && request.resource.data.data is string
+            && request.resource.data.data.size() <= 700000;
+          allow update, delete: if isAdmin();
+        }
+      }
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data);
+        allow create: if signedIn()
+          && isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'senderId', 'text', 'timestamp', 'isRead', 'imageUrl', 'linkUrl', 'linkTitle',
+            'fileUrl', 'fileName', 'fileType', 'fileSize', 'sharedNote'
+          ])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 5000
+          && (!('linkUrl' in request.resource.data) || request.resource.data.linkUrl.matches('https?://.*'))
+          && (!('fileUrl' in request.resource.data)
+            || request.resource.data.fileUrl.matches('https://firebasestorage[.]googleapis[.]com/.*')
+            // Files stored in this room's files subcollection (see src/lib/firestore/chat.ts).
+            || request.resource.data.fileUrl.matches('eduswap-file:[A-Za-z0-9]{1,40}'))
+          && (!('imageUrl' in request.resource.data) || request.resource.data.imageUrl.matches('https://firebasestorage[.]googleapis[.]com/.*'));
+        allow update: if isAdmin()
+          || (isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data)
+            && resource.data.senderId == request.auth.uid
+            && request.resource.data.senderId == resource.data.senderId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 5000
+            && request.resource.data.editedAt is timestamp
+            && !resource.data.keys().hasAny(['deletedAt', 'linkUrl', 'fileUrl', 'sharedNote']))
+          || (isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data)
+            && resource.data.senderId == request.auth.uid
+            && request.resource.data.senderId == resource.data.senderId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'text', 'deletedAt', 'linkUrl', 'linkTitle', 'fileUrl', 'fileName', 'fileType', 'fileSize', 'sharedNote'
+            ])
+            && request.resource.data.text == 'This message was deleted'
+            && request.resource.data.deletedAt is timestamp)
+          || (isParticipant(get(/databases/$(database)/documents/chatRooms/$(roomId)).data)
+            && resource.data.senderId != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredAt', 'isRead', 'readAt'])
+            && request.resource.data.deliveredAt is timestamp
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isRead', 'readAt'])
+              || (request.resource.data.isRead == true && request.resource.data.readAt is timestamp)));
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read: if isAdmin() || (signedIn() && resource.data.reporterId == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /skillVerifications/{verificationId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /comments/{commentId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.sessionId is string
+        && commentId == request.resource.data.sessionId + '_' + request.auth.uid
+        && request.resource.data.targetUserId is string
+        && request.resource.data.targetUserId != request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 8
+        && request.resource.data.text.size() <= 1000
+        && !request.resource.data.keys().hasAny(['moderationStatus', 'moderatedAt'])
+        && completedSessionBetween(request.resource.data.sessionId, request.auth.uid, request.resource.data.targetUserId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /callHistory/{entryId} {
+      allow read: if isAdmin() || isParticipant(resource.data);
+      allow create: if signedIn() && request.resource.data.participants.hasAny([request.auth.uid]);
+      allow update, delete: if isAdmin();
+    }
+
+    match /groupCallRooms/{roomId} {
+      allow read: if isAdmin() || isParticipant(resource.data);
+      allow create: if signedIn()
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.participants.hasAny([request.auth.uid])
+        && request.resource.data.status == 'open';
+      allow update: if isAdmin() || (signedIn() && resource.data.hostId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /videoCalls/{roomId} {
+      allow read: if signedIn() && (resource.data.creatorId == request.auth.uid || resource.data.participants.hasAny([request.auth.uid]));
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid
+        && request.resource.data.participants.hasAny([request.auth.uid])
+        && request.resource.data.participants.size() >= 1;
+      allow update: if signedIn()
+        && resource.data.participants.hasAny([request.auth.uid])
+        && request.resource.data.creatorId == resource.data.creatorId
+        && request.resource.data.participants == resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer', 'endedAt', 'endedBy', 'offer', 'offerVersion', 'restartRequestedAt'])
+        // Only the caller sends offers (initial and reconnect).
+        && (resource.data.creatorId == request.auth.uid
+          || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['offer', 'offerVersion']));
+      allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
+
+      match /{subcollection}/{candidateId} {
+        allow read, write: if signedIn()
+          && get(/databases/$(database)/documents/videoCalls/$(roomId)).data.participants.hasAny([request.auth.uid]);
+      }
+    }
+
+    match /skillsCatalog/{skillId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /universities/{universityId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /auditLogs/{auditId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Any collection not explicitly listed above is denied by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

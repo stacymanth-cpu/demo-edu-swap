@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    match /registrationDocuments/{userId}/{fileName} {
+      allow read: if isAdmin();
+      allow write: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType in ['application/pdf', 'image/jpeg', 'image/png'];
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == userId);
+    }
+
+    match /introductionVideos/{userId}/{fileName} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow write: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.size > 0
+        && request.resource.size <= 50 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == userId);
+    }
+
+    match /chatDocuments/{roomId}/{fileName} {
+      allow read: if signedIn()
+        && firestore.get(/databases/(default)/documents/chatRooms/$(roomId)).data.participants.hasAny([request.auth.uid]);
+      allow write: if signedIn()
+        && firestore.get(/databases/(default)/documents/chatRooms/$(roomId)).data.participants.hasAny([request.auth.uid])
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in [
+          'application/pdf', 'image/jpeg', 'image/png', 'text/plain',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+      allow delete: if isAdmin()
+        || (signedIn() && firestore.get(/databases/(default)/documents/chatRooms/$(roomId)).data.participants.hasAny([request.auth.uid]));
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

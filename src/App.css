@@ -1,0 +1,30 @@
+/* ─── App Layout ───────────────────────────────────────────────── */
+.app-layout {
+  min-height: 100vh;
+}
+
+.app-layout.with-sidebar .main-content {
+  margin-left: var(--sidebar-width);
+}
+
+.main-content.no-sidebar {
+  margin-left: 0 !important;
+}
+
+/* Chat page needs full height without scroll */
+.app-layout.chat-layout .main-content {
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .app-layout.with-sidebar .main-content {
+    margin-left: 0;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+
+  .app-layout.chat-layout .main-content {
+    height: calc(100dvh - 68px - env(safe-area-inset-bottom));
+    padding-bottom: 0;
+  }
+}

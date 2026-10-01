@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <!--
+    blob: lets shared files and registration documents (rebuilt from Firestore) open in a tab.
+    LiveKit (wss) and the local token server (port 8787) are needed for group calls.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com; script-src 'self' https://*.firebaseio.com https://*.googleapis.com; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.googleusercontent.com https://*.livekit.cloud wss://*.livekit.cloud http://127.0.0.1:8787 http://localhost:8787; img-src 'self' data: blob: https://*.googleusercontent.com; media-src 'self' blob: data: https://*.googleapis.com; object-src 'self' blob:; frame-src 'self' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com;" />
+  <meta name="description"
+    content="EduSwap — Exchange skills, grow together. A platform where university students trade knowledge instead of money." />
+  <meta name="theme-color" content="#ffffff" />
+  <title>EduSwap</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

@@ -1,0 +1,448 @@
+/* ─── Sessions Page ────────────────────────────────────────────── */
+.sessions-page {
+  padding: var(--page-padding);
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+}
+
+.sessions-page > .page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.reminder-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-primary); border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.reminder-toggle.active { border-color: rgba(20, 184, 166, .25); background: rgba(20, 184, 166, .09); color: var(--accent-600); }
+.reminder-toggle:disabled { cursor: not-allowed; opacity: .65; }
+.reschedule-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.reschedule-fields label { display: grid; gap: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.reschedule-timezone { display: flex; align-items: center; gap: 6px; margin: 12px 0; padding: 8px 10px; border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-secondary); font-size: 11px; }
+.reschedule-timezone svg { color: var(--primary-600); }
+
+.session-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.session-call-error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger-400);
+  font-size: 13px;
+}
+
+.filter-btn {
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  transition: all var(--transition-fast);
+}
+
+.filter-btn:hover { border-color: var(--border-accent); }
+.filter-btn.active {
+  background: var(--primary-500);
+  color: white;
+  border-color: var(--primary-500);
+}
+
+.sessions-list-full {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.session-card-full {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: all var(--transition-base);
+}
+
+.session-card-full:hover {
+  border-color: var(--border-accent);
+}
+
+.session-card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.session-meta svg {
+  color: var(--text-tertiary);
+}
+
+.session-status {
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-scheduled {
+  background: rgba(79, 70, 229, 0.12);
+  color: var(--primary-600);
+}
+
+.status-expired {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+}
+
+.status-completed {
+  background: rgba(20, 184, 166, 0.12);
+  color: var(--accent-600);
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger-400);
+}
+
+.session-card-body h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.session-role {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.session-role strong {
+  color: var(--text-primary);
+}
+
+.session-notes {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.session-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.credit-earn {
+  color: var(--accent-600);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.credit-spend {
+  color: var(--danger-400);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.session-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.expired-note {
+  padding: 7px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.teams-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(88, 86, 214, 0.12);
+  color: #7b83eb;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.session-video-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(20, 184, 166, 0.12);
+  color: var(--accent-600);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.session-video-btn:hover {
+  background: rgba(20, 184, 166, 0.24);
+}
+
+.teams-link-btn:hover {
+  background: rgba(88, 86, 214, 0.25);
+  color: #9da3f2;
+}
+
+.teams-link-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.teams-link-btn.disabled:hover {
+  background: rgba(88, 86, 214, 0.12);
+}
+
+.complete-btn,
+.cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.complete-btn {
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--accent-600);
+}
+
+.complete-btn:hover { background: var(--accent-500); color: white; }
+
+.session-awaiting-confirmation { display: inline-flex; align-items: center; padding: 7px 4px; font-size: 12px; color: var(--text-secondary, #64748b); }
+
+.review-session-btn, .review-submitted-badge { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 34px; padding: 7px 11px; border-radius: var(--radius-md); font-size: 12px; font-weight: 700; }
+.review-session-btn { border: 1px solid rgba(245, 158, 11, .24); background: rgba(245, 158, 11, .09); color: #b45309; }
+.review-session-btn:hover { background: var(--warning-500); color: white; }
+.review-submitted-badge { background: rgba(20, 184, 166, .1); color: var(--accent-600); }
+
+.cancel-btn {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger-400);
+}
+
+.cancel-btn:hover { background: var(--danger-500); color: white; }
+
+.empty-sessions {
+  text-align: center;
+  padding: 48px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-primary);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.review-modal {
+  width: min(550px, 100%);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.modal-header {
+  margin-bottom: 18px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.modal-header p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.review-form {
+  display: grid;
+  gap: 14px;
+}
+
+.review-input-row {
+  display: grid;
+  gap: 8px;
+}
+
+.booking-input,
+.booking-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.booking-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--gradient-primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.booking-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.booking-error,
+.booking-success {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.booking-error {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger-400);
+}
+
+.booking-success {
+  background: rgba(20, 184, 166, 0.12);
+  color: var(--accent-600);
+}
+
+
+.yes-no-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.binary-yes-btn,
+.binary-no-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.binary-yes-btn {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: rgba(20, 184, 166, 0.32);
+  color: var(--accent-600);
+}
+
+.binary-yes-btn:hover:not(:disabled) {
+  background: rgba(20, 184, 166, 0.26);
+}
+
+.binary-no-btn {
+  background: rgba(88, 86, 214, 0.14);
+  border-color: rgba(88, 86, 214, 0.32);
+  color: #9da3f2;
+}
+
+.binary-no-btn:hover:not(:disabled) {
+  background: rgba(88, 86, 214, 0.24);
+}
+
+.binary-yes-btn:disabled,
+.binary-no-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.binary-help-text {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 768px) {
+  .sessions-page {
+    padding: 16px;
+    padding-bottom: 80px;
+  }
+  .session-card-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .session-card-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .session-actions-row {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .session-actions-row button, .session-actions-row a { flex: 1 1 135px; justify-content: center; min-height: 44px; }
+  .sessions-page > .page-header { align-items: flex-start; flex-direction: column; }
+  .reminder-toggle { width: 100%; justify-content: center; }
+  .reschedule-fields { grid-template-columns: 1fr; }
+}

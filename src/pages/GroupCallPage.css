@@ -1,0 +1,155 @@
+/* Group call screen: dark stage matching the one-to-one call screen. */
+.group-call-page {
+  padding: 16px;
+}
+
+.group-call-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100vh - 32px);
+  min-height: 480px;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: #0b1020;
+  box-shadow: var(--shadow-xl);
+  color: #f8fafc;
+}
+
+.group-call-header { display: flex; align-items: center; gap: 12px; }
+
+.group-call-back {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.group-call-back:hover { background: rgba(255, 255, 255, 0.16); }
+
+.group-call-title { min-width: 0; }
+.group-call-title h1 { overflow: hidden; margin: 0; color: #f8fafc; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+.group-call-title p { display: flex; align-items: center; gap: 7px; margin: 0; color: #a5b0c4; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.group-call-dot { width: 8px; height: 8px; border-radius: var(--radius-full); background: #a5b0c4; }
+.group-call-dot.live { background: #22c55e; }
+.group-call-dot.pending { background: #f59e0b; }
+.group-call-dot.off { background: #ef4444; }
+
+.group-call-alerts { display: grid; gap: 8px; }
+.group-call-alerts:empty { display: none; }
+
+.group-call-alert {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.group-call-alert.error { border-color: rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.14); color: #fecaca; }
+
+/* Tiles fill the stage; the column count follows the number of people. */
+.group-call-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.group-call-grid.count-1 { grid-template-columns: 1fr; }
+.group-call-grid.count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.group-call-grid.count-3,
+.group-call-grid.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.group-call-tile {
+  position: relative;
+  min-height: 160px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  background: #111827;
+  color: white;
+}
+
+.group-call-tile > span {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+}
+
+.group-call-tile video { width: 100%; height: 100%; object-fit: cover; }
+.group-call-tile video.mirrored { transform: scaleX(-1); }
+.group-call-tile audio { display: none; }
+
+.group-call-tile-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  background: radial-gradient(circle at 50% 45%, #1e293b 0%, #111827 70%);
+  color: #e5e7eb;
+  font-size: 44px;
+  font-weight: 700;
+}
+
+.group-call-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.gc-control {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  transition: background 0.15s ease;
+}
+
+.gc-control:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
+.gc-control:disabled { opacity: 0.4; cursor: not-allowed; }
+.gc-control.is-active { background: #f8fafc; color: #0f172a; }
+.gc-control.is-danger { width: 64px; background: #ef4444; color: #fff; }
+.gc-control.is-danger:hover { background: #dc2626; }
+
+.gc-end-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: var(--radius-full);
+  color: #fecaca;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.gc-end-all:hover:not(:disabled) { background: rgba(239, 68, 68, 0.15); }
+
+@media (max-width: 768px) {
+  .group-call-page { padding: 0; }
+  .group-call-stage { height: calc(100dvh - 68px - env(safe-area-inset-bottom)); min-height: 0; padding: 12px; border-radius: 0; }
+  .group-call-grid, .group-call-grid.count-2 { grid-template-columns: 1fr; }
+  .group-call-grid.count-3, .group-call-grid.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gc-control { width: 48px; height: 48px; }
+}
