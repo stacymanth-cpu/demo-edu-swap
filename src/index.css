@@ -141,6 +141,20 @@ h1, h2, h3, h4 {
   letter-spacing: -0.015em;
 }
 
+/* Verified-student seal next to names: brand-blue badge with a white tick. */
+.verified-badge {
+  display: inline-flex;
+  flex: none;
+  margin-left: 0.3em;
+  vertical-align: -0.15em;
+  line-height: 0;
+}
+
+.verified-badge svg {
+  fill: var(--primary-500);
+  color: #fff;
+}
+
 /* Figures in stats, times and prices line up. */
 time, .tabular-nums { font-variant-numeric: tabular-nums; }
 

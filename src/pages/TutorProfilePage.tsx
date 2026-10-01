@@ -7,6 +7,7 @@ import { getCompatibleLearnSkills, getCompatibleTeachSkills } from '../lib/match
 import { isValidTeamsLink } from '../lib/meetingLinks';
 import type { Comment, User } from '../types';
 import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import './TutorProfilePage.css';
 
 export function TutorProfilePage() {
@@ -225,7 +226,7 @@ export function TutorProfilePage() {
             {tutor.photoUrl ? <img src={tutor.photoUrl} alt={tutor.displayName} /> : <span>{tutor.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}</span>}
           </div>
           <div className="tutor-summary">
-            <h1>{tutor.displayName}</h1>
+            <h1>{tutor.displayName}{tutor.studentVerified && <VerifiedBadge size={24} />}</h1>
             <p className="tutor-university">{tutor.university}</p>
             <div className="tutor-stats-row">
               <span><Star size={16} /> {tutor.rating}</span>
@@ -267,11 +268,12 @@ export function TutorProfilePage() {
           </div>
           {tutor.learningGoals && <div className="tutor-booking-tip"><BookOpen size={16} /> Learning goals: {tutor.learningGoals}</div>}
           {tutor.weeklyAvailability?.length ? <div className="tutor-booking-tip"><Clock size={16} /> Available: {tutor.weeklyAvailability.map(slot => `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][slot.day]} ${slot.start}-${slot.end}`).join(' · ')}</div> : <div className="tutor-booking-tip"><Clock size={16} /> This tutor has not listed weekly availability yet.</div>}
-          <div className="tutor-verification-status">
-            <span className={`verification-pill ${tutor.studentVerified ? 'verified' : 'unverified'}`}>
-              {tutor.studentVerified ? 'Verified student and tutor' : 'Student verification pending'}
-            </span>
-          </div>
+          {/* Verified students carry the badge by their name; only the pending state needs a note here. */}
+          {!tutor.studentVerified && (
+            <div className="tutor-verification-status">
+              <span className="verification-pill unverified">Student verification pending</span>
+            </div>
+          )}
           {canViewIntroductionVideo && <div className="tutor-introduction-video"><h3>Introduction video</h3><IntroVideoPlayer userId={tutor.uid} videoUrl={tutor.introductionVideoUrl} onUnavailable={() => setIntroVideoUnavailable(true)} /></div>}
         </section>
 

@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { getSkillDescription } from '../lib/skillDescriptions';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import type { AiMatchRecommendation, SkillCategory, SkillInfo, User } from '../types';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import './ExplorePage.css';
 
 export function ExplorePage() {
@@ -426,7 +427,7 @@ export function ExplorePage() {
               }).map(u => (
                 <button key={u.uid} type="button" className="skill-detail-user" onClick={() => navigate(`/tutor/${u.uid}`)}>
                   <div>
-                    <strong>{u.displayName}</strong>
+                    <strong>{u.displayName}{u.studentVerified && <VerifiedBadge size={15} />}</strong>
                     <p>{u.skillsTeach.some(skill => skill.trim().toLowerCase() === selectedSkill.name.trim().toLowerCase()) ? 'Teaches this skill' : 'Wants to learn this skill'}</p>
                   </div>
                   <span className="skill-detail-user-role">View</span>
@@ -453,7 +454,7 @@ export function ExplorePage() {
                 <div key={rec.user.uid} className="ai-recommendation-card">
                   <div className="ai-rec-avatar">{rec.user.photoUrl ? <img src={rec.user.photoUrl} alt={rec.user.displayName} /> : getInitials(rec.user.displayName)}</div>
                   <div className="ai-rec-body">
-                    <div className="ai-rec-title"><h3>{rec.user.displayName}</h3><span className="compatibility-score"><strong>{rec.score}%</strong> match</span></div>
+                    <div className="ai-rec-title"><h3>{rec.user.displayName}{rec.user.studentVerified && <VerifiedBadge size={16} />}</h3><span className="compatibility-score"><strong>{rec.score}%</strong> match</span></div>
                     <span>{rec.user.university}</span>
                     <p>{rec.summary}</p>
                     <div className="ai-rec-reasons">{rec.reasons.map(reason => <span key={reason}><Check size={11} /> {reason}</span>)}</div>
@@ -488,7 +489,7 @@ export function ExplorePage() {
                     )}
                     {u.isOnline && <div className="online-dot-lg" />}
                   </div>
-                  <h3>{u.displayName}</h3>
+                  <h3>{u.displayName}{u.studentVerified && <VerifiedBadge size={16} />}</h3>
                   <span className="user-uni">{u.university}</span>
                   <div className="user-stats-row">
                     <span className="user-stat"><Star size={14} /> {u.rating}</span>

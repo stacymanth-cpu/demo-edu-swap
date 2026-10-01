@@ -5,6 +5,7 @@ import { subscribeMatches, updateMatchStatus, createSession, getOrCreateChatRoom
 import { useAuth } from '../context/AuthContext';
 import { canScheduleSession, formatTimeZoneLabel, getScheduleValidationError, hasSchedulingConflict } from '../lib/sessionScheduling';
 import type { Session, SkillMatch } from '../types';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import './MatchesPage.css';
 
 type MeetingMode = 'eduswap';
@@ -435,7 +436,7 @@ export function MatchesPage() {
                   </div>
                   <div className="match-details">
                     <div className="match-name-row">
-                      <h3>{other.displayName}</h3>
+                      <h3>{other.displayName}{other.studentVerified && <VerifiedBadge size={16} />}</h3>
                       {other.isOnline && <span className="online-label">Online</span>}
                     </div>
                     <span className="match-uni">{other.university}</span>

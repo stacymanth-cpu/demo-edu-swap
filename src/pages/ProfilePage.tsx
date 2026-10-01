@@ -3,6 +3,7 @@ import { Star, MapPin, BookOpen, Coins, Calendar, TrendingUp, ArrowUp, ArrowDown
 import { useAuth } from '../context/AuthContext';
 import { createGroupCallRoom, getSessions, getTransactions, getComments, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
 import { IntroVideoRecorder } from '../components/introVideo/IntroVideoRecorder';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
 import { SkillPicker } from '../components/SkillPicker';
 import { format } from 'date-fns';
@@ -350,7 +351,7 @@ export function ProfilePage() {
               id="edit-name"
             />
           ) : (
-            <h1>{user.displayName}</h1>
+            <h1>{user.displayName}{user.studentVerified && <VerifiedBadge size={24} />}</h1>
           )}
 
           <div className="profile-meta">
@@ -415,7 +416,6 @@ export function ProfilePage() {
               </button>
             )}
           </div>
-          {user.studentVerified && <div className="verified-student-badge"><BadgeCheck size={14} /> Verified student and tutor</div>}
         </div>
       </section>
 

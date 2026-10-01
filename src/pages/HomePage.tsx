@@ -7,6 +7,7 @@ import { getSkillIcon } from '../lib/iconMap';
 import { getAiRecommendations } from '../lib/matchUtils';
 import { format } from 'date-fns';
 import type { Session, SkillInfo, User } from '../types';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import './HomePage.css';
 
 export function HomePage() {
@@ -203,7 +204,7 @@ export function HomePage() {
                     {match.isOnline && <div className="online-indicator" />}
                   </div>
                   <div className="match-user-info">
-                    <h4>{match.displayName}</h4>
+                    <h4>{match.displayName}{match.studentVerified && <VerifiedBadge size={15} />}</h4>
                     <span>{match.university.split('University of ').pop() || match.university}</span>
                   </div>
                   <div className="match-rating">
