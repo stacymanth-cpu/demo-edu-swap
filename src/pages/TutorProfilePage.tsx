@@ -6,6 +6,7 @@ import { getComments, getUser, getMatches, createMatch, submitReport, blockUser 
 import { getCompatibleLearnSkills, getCompatibleTeachSkills } from '../lib/matchUtils';
 import { isValidTeamsLink } from '../lib/meetingLinks';
 import type { Comment, User } from '../types';
+import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
 import './TutorProfilePage.css';
 
 export function TutorProfilePage() {
@@ -15,6 +16,7 @@ export function TutorProfilePage() {
   const [tutor, setTutor] = useState<User | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [acceptedMatch, setAcceptedMatch] = useState(false);
+  const [introVideoUnavailable, setIntroVideoUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTeach, setSelectedTeach] = useState('');
   const [selectedLearn, setSelectedLearn] = useState('');
@@ -91,10 +93,12 @@ export function TutorProfilePage() {
 
   const canRequestBooking = !!user && !!tutor && tutor.studentVerified === true && !!selectedLearn && !!scheduleDate && !!scheduleTime && !!learningGoal;
   const videoVisibility = tutor?.introductionVideoVisibility || 'members';
-  const canViewIntroductionVideo = Boolean(tutor?.introductionVideoUrl) && (
-    videoVisibility === 'members'
+  // Public profiles omit the video link unless it is visible to all members, so for "matches only"
+  // the player asks Firestore directly; the rules decide and the section hides if refused.
+  const canViewIntroductionVideo = !introVideoUnavailable && (
+    (videoVisibility === 'members' && Boolean(tutor?.introductionVideoUrl))
     || (videoVisibility === 'matches' && acceptedMatch)
-    || (videoVisibility === 'private' && user?.uid === tutor?.uid)
+    || user?.uid === tutor?.uid
   );
 
   const selectedDate = scheduleDate ? new Date(`${scheduleDate}T12:00:00`) : null;
@@ -268,7 +272,7 @@ export function TutorProfilePage() {
               {tutor.studentVerified ? 'Verified student and tutor' : 'Student verification pending'}
             </span>
           </div>
-          {canViewIntroductionVideo && <div className="tutor-introduction-video"><h3>Introduction video</h3><video controls preload="metadata" src={tutor.introductionVideoUrl} /></div>}
+          {canViewIntroductionVideo && <div className="tutor-introduction-video"><h3>Introduction video</h3><IntroVideoPlayer userId={tutor.uid} videoUrl={tutor.introductionVideoUrl} onUnavailable={() => setIntroVideoUnavailable(true)} /></div>}
         </section>
 
         <section className="booking-card">

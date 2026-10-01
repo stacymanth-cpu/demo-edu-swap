@@ -13,3 +13,4 @@ export * from './firestore/catalog';
 export * from './firestore/credits';
 export * from './firestore/reviews';
 export * from './firestore/media';
+export * from './firestore/introVideos';

@@ -187,6 +187,47 @@ describe('ratings without Cloud Functions', () => {
   });
 });
 
+describe('introduction videos', () => {
+  const header = (overrides: Record<string, unknown> = {}) => ({
+    contentType: 'video/webm', size: 3_000_000, chunkCount: 5, visibility: 'members', allowedViewerIds: [], updatedAt: Timestamp.now(), ...overrides,
+  });
+
+  async function seedVideo(overrides: Record<string, unknown>) {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'introVideos/alice'), header(overrides));
+      await setDoc(doc(context.firestore(), 'introVideos/alice/chunks/0'), { index: 0, data: 'AAAA' });
+    });
+  }
+
+  it('lets students record their own video but not someone else’s', async () => {
+    await assertSucceeds(setDoc(doc(as('alice'), 'introVideos/alice/chunks/0'), { index: 0, data: 'AAAA' }));
+    await assertSucceeds(setDoc(doc(as('alice'), 'introVideos/alice'), header()));
+    await assertFails(setDoc(doc(as('mallory'), 'introVideos/alice'), header()));
+    await assertFails(setDoc(doc(as('mallory'), 'introVideos/alice/chunks/0'), { index: 0, data: 'AAAA' }));
+  });
+
+  it('blocks oversized or unexpected videos', async () => {
+    await assertFails(setDoc(doc(as('alice'), 'introVideos/alice'), header({ size: 50_000_000 })));
+    await assertFails(setDoc(doc(as('alice'), 'introVideos/alice'), header({ contentType: 'application/x-msdownload' })));
+    await assertFails(setDoc(doc(as('alice'), 'introVideos/alice/chunks/16'), { index: 16, data: 'AAAA' }));
+  });
+
+  it('shows "all members" videos to any signed-in student', async () => {
+    await seedVideo({ visibility: 'members' });
+    await assertSucceeds(getDoc(doc(as('carol'), 'introVideos/alice/chunks/0')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'introVideos/alice/chunks/0')));
+  });
+
+  it('shows "matches only" videos to listed matches, and "private" videos to the owner only', async () => {
+    await seedVideo({ visibility: 'matches', allowedViewerIds: ['bob'] });
+    await assertSucceeds(getDoc(doc(as('bob'), 'introVideos/alice/chunks/0')));
+    await assertFails(getDoc(doc(as('carol'), 'introVideos/alice/chunks/0')));
+    await seedVideo({ visibility: 'private' });
+    await assertFails(getDoc(doc(as('bob'), 'introVideos/alice/chunks/0')));
+    await assertSucceeds(getDoc(doc(as('alice'), 'introVideos/alice/chunks/0')));
+  });
+});
+
 describe('platform settings', () => {
   it('lets signed-in users read the platform document only', async () => {
     await assertSucceeds(getDoc(doc(as('bob'), 'settings/platform')));

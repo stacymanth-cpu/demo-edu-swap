@@ -1,0 +1,83 @@
+.intro-recorder {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+}
+
+.intro-recorder-start { display: grid; gap: 10px; justify-items: start; }
+.intro-recorder-start p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+
+.intro-recorder-stage { position: relative; display: grid; gap: 10px; }
+
+.intro-recorder-video,
+.intro-player {
+  width: 100%;
+  max-height: 360px;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background: #0b1020;
+  object-fit: cover;
+}
+
+.intro-recorder-video.mirrored { transform: scaleX(-1); }
+
+.intro-recorder-timer {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.7);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-recorder-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: var(--danger-500);
+  animation: intro-recorder-blink 1s ease-in-out infinite;
+}
+
+.intro-recorder-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.intro-recorder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.intro-recorder-btn:hover:not(:disabled) { background: var(--gray-50); }
+.intro-recorder-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.intro-recorder-btn.primary { border-color: var(--primary-500); background: var(--primary-500); color: #fff; }
+.intro-recorder-btn.primary:hover:not(:disabled) { background: var(--primary-600); }
+.intro-recorder-btn.danger { border-color: var(--danger-500); background: var(--danger-500); color: #fff; }
+.intro-recorder-btn.danger:hover:not(:disabled) { background: var(--danger-600); }
+
+.intro-recorder-error { margin: 0; color: var(--danger-600); font-size: 13px; }
+
+.intro-player-loading { display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font-size: 13px; }
+.intro-player-note { margin: 0; color: var(--text-tertiary); font-size: 13px; }
+
+@keyframes intro-recorder-blink { 50% { opacity: 0.3; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-recorder-dot { animation: none; }
+}

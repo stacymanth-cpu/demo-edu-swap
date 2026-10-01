@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import { Star, MapPin, BookOpen, Coins, Calendar, TrendingUp, ArrowUp, ArrowDown, Loader2, Pencil, X, Plus, Save, Camera, BadgeCheck, CircleCheck, Circle, ChevronDown, ShieldCheck, UserRoundCheck, Video, Award, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { createGroupCallRoom, getSessions, getTransactions, getComments, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadIntroductionVideo, uploadProfilePhoto, uploadRegistrationDocument } from '../lib/firestoreService';
+import { createGroupCallRoom, getSessions, getTransactions, getComments, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
+import { IntroVideoRecorder } from '../components/introVideo/IntroVideoRecorder';
+import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
 import { SkillPicker } from '../components/SkillPicker';
 import { format } from 'date-fns';
 import type { Session, CreditTransaction, Comment as UserComment, SkillInfo, SkillMatch, User, WeeklyAvailability } from '../types';
@@ -187,18 +189,8 @@ export function ProfilePage() {
     setEditing(false);
   };
 
-  const selectIntroductionVideo = (file?: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('video/')) {
-      setPendingIntroductionVideo(null);
-      setSaveError('Please select a video file.');
-      return;
-    }
-    if (file.size > 50 * 1024 * 1024) {
-      setPendingIntroductionVideo(null);
-      setSaveError('Introduction videos must be 50 MB or smaller.');
-      return;
-    }
+  // A clip from the in-app recorder; it is saved with the rest of the profile.
+  const selectIntroductionVideo = (file: File) => {
     setSaveError('');
     setVideoUploadProgress(0);
     setPendingIntroductionVideo(file);
@@ -252,8 +244,12 @@ export function ProfilePage() {
         weeklyAvailability: editWeeklyAvailability,
         introductionVideoVisibility: editVideoVisibility,
         ...(pendingPhoto ? { photoUrl: await uploadProfilePhoto(user.uid, pendingPhoto) } : {}),
-        ...(pendingIntroductionVideo ? { introductionVideoUrl: await uploadIntroductionVideo(user.uid, pendingIntroductionVideo, setVideoUploadProgress) } : {}),
+        ...(pendingIntroductionVideo ? { introductionVideoUrl: await saveIntroVideo(user.uid, pendingIntroductionVideo, editVideoVisibility || 'members', setVideoUploadProgress) } : {}),
       };
+      // A new visibility applies to the existing recording too (the rules read it from the video).
+      if (!pendingIntroductionVideo && isStoredIntroVideo(user.introductionVideoUrl) && editVideoVisibility !== user.introductionVideoVisibility) {
+        await updateIntroVideoAccess(user.uid, editVideoVisibility || 'members');
+      }
       await updateProfile(updates);
       setPendingPhoto(null);
       setPendingIntroductionVideo(null);
@@ -462,7 +458,7 @@ export function ProfilePage() {
           <h2>Professional profile</h2>
           <div className="professional-fields">
             {editing ? <label>Availability<select value={editAvailability} onChange={e => setEditAvailability(e.target.value as typeof editAvailability)}><option value="available">Available</option><option value="teaching">Currently teaching</option><option value="pending">Pending request</option><option value="offline">Offline / unavailable</option></select></label> : <div className="professional-readonly-field"><span>Availability</span><strong>{(user.availability || 'offline').replace(/^./, value => value.toUpperCase())}</strong></div>}
-            {editing ? <label>Introduction video<input type="file" accept="video/*" disabled={saving} onChange={e => selectIntroductionVideo(e.target.files?.[0])} /><small className="upload-help">Choose a video file up to 50 MB.</small>{pendingIntroductionVideo && <span className="upload-progress">Selected: {pendingIntroductionVideo.name}</span>}{saving && pendingIntroductionVideo && videoUploadProgress > 0 && <span className="upload-progress">Uploading {videoUploadProgress}%</span>}</label> : <div className="professional-readonly-field"><span>Introduction video</span><strong>{user.introductionVideoUrl ? 'Uploaded' : 'Not uploaded'}</strong></div>}
+            <div className="professional-readonly-field"><span>Introduction video</span><strong>{pendingIntroductionVideo ? (saving && videoUploadProgress > 0 ? `Saving ${videoUploadProgress}%` : 'New recording ready to save') : user.introductionVideoUrl ? 'Recorded' : 'Not recorded yet'}</strong></div>
             {editing ? <label>Session preference<select value={editSessionPreference} onChange={e => setEditSessionPreference(e.target.value as User['sessionPreference'])}><option value="either">Remote or in person</option><option value="remote">Remote</option><option value="in_person">In person</option></select></label> : <div className="professional-readonly-field"><span>Session preference</span><strong>{(user.sessionPreference || 'either').replace('_', ' ')}</strong></div>}
             {editing ? <label>Teaching style<select value={editTeachingStyle} onChange={e => setEditTeachingStyle(e.target.value as User['preferredTeachingStyle'])}><option value="practical">Practical exercises</option><option value="visual">Visual demonstrations</option><option value="discussion">Discussion</option><option value="structured">Structured lessons</option></select></label> : <div className="professional-readonly-field"><span>Teaching style</span><strong>{user.preferredTeachingStyle || 'Practical'}</strong></div>}
             {editing ? <label>Languages<input value={editLanguages} onChange={e => setEditLanguages(e.target.value)} placeholder="English, isiZulu" /></label> : <div className="professional-readonly-field"><span>Languages</span><strong>{user.languages?.join(', ') || 'Not provided'}</strong></div>}
@@ -487,7 +483,8 @@ export function ProfilePage() {
             <div className="professional-readonly-field availability-summary"><span>Weekly availability</span><strong>{user.weeklyAvailability?.length ? user.weeklyAvailability.map(slot => `${availabilityDays.find(item => item.day === slot.day)?.label} ${slot.start}-${slot.end}`).join(' · ') : 'Not provided'}</strong></div>
           )}
           <div className="profile-goals-field">{editing ? <label>Learning goals<textarea rows={3} maxLength={500} value={editLearningGoals} onChange={e => setEditLearningGoals(e.target.value)} placeholder="What would you like to achieve?" /></label> : <><span>Learning goals</span><p>{user.learningGoals || 'Add a specific goal to improve your recommendations.'}</p></>}</div>
-          {(pendingVideoPreviewUrl || user.introductionVideoUrl) && <div className="profile-video-preview"><div><span>{pendingIntroductionVideo ? 'Selected introduction video' : 'Introduction video'}</span><p>{pendingIntroductionVideo ? 'Preview the video before saving your profile.' : 'This is how your video appears to other students.'}</p></div><video controls preload="metadata" src={pendingVideoPreviewUrl || user.introductionVideoUrl} /></div>}
+          {(pendingVideoPreviewUrl || user.introductionVideoUrl) && <div className="profile-video-preview"><div><span>{pendingIntroductionVideo ? 'New introduction video' : 'Introduction video'}</span><p>{pendingIntroductionVideo ? 'Save your profile to publish this recording.' : 'This is how your video appears to other students.'}</p></div>{pendingVideoPreviewUrl ? <video controls preload="metadata" playsInline src={pendingVideoPreviewUrl} /> : <IntroVideoPlayer userId={user.uid} videoUrl={user.introductionVideoUrl} />}</div>}
+          {editing && <IntroVideoRecorder disabled={saving} onRecorded={selectIntroductionVideo} />}
         </section>
 
         <section className="profile-section profile-section-wide animate-fade-in-up">

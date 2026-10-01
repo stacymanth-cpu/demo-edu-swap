@@ -1,8 +1,5 @@
-// Profile photo and introduction video uploads.
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+// Profile photo uploads. Introduction videos are recorded in the app; see ./introVideos.
 import { updateUser } from './users';
-import { toStorageUploadError } from './shared';
 
 /**
  * Resize and convert image to base64 data URL, then store in Firestore.
@@ -16,19 +13,6 @@ export async function uploadProfilePhoto(uid: string, file: File): Promise<strin
   return dataUrl;
 }
 
-export async function uploadIntroductionVideo(uid: string, file: File, onProgress?: (progress: number) => void): Promise<string> {
-  if (!file.type.startsWith('video/')) throw new Error('Please select a video file.');
-  if (file.size > 50 * 1024 * 1024) throw new Error('Introduction videos must be 50 MB or smaller.');
-  const storageRef = ref(storage, `introductionVideos/${uid}/${Date.now()}-${file.name}`);
-  const uploadTask = uploadBytesResumable(storageRef, file, { contentType: file.type });
-  const videoUrl = await new Promise<string>((resolve, reject) => {
-    uploadTask.on('state_changed', snapshot => onProgress?.(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)), error => reject(toStorageUploadError(error)), async () => {
-      try { resolve(await getDownloadURL(uploadTask.snapshot.ref)); } catch (error) { reject(error); }
-    });
-  });
-  await updateUser(uid, { introductionVideoUrl: videoUrl });
-  return videoUrl;
-}
 
 function resizeImage(file: File, maxW: number, maxH: number, quality: number): Promise<string> {
   return new Promise((resolve, reject) => {

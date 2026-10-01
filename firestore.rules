@@ -210,6 +210,40 @@ service cloud.firestore {
         && data.total == previousTotal + comment.rating;
     }
 
+    // Introduction videos recorded in the app, stored as base64 chunks (no Firebase Storage).
+    // visibility: members → any signed-in student; matches → listed allowedViewerIds; private → owner.
+    function canWatchIntroVideo(userId, video) {
+      return isAdmin()
+        || isUser(userId)
+        || (signedIn() && (video.visibility == 'members'
+          || (video.visibility == 'matches' && video.get('allowedViewerIds', []).hasAny([request.auth.uid]))));
+    }
+
+    match /introVideos/{userId} {
+      allow read: if canWatchIntroVideo(userId, resource.data);
+      allow create, update: if isUser(userId)
+        && request.resource.data.keys().hasOnly(['contentType', 'size', 'chunkCount', 'visibility', 'allowedViewerIds', 'updatedAt'])
+        && request.resource.data.contentType in ['video/webm', 'video/mp4']
+        && request.resource.data.size is int && request.resource.data.size > 0 && request.resource.data.size <= 8 * 1024 * 1024
+        && request.resource.data.chunkCount is int && request.resource.data.chunkCount >= 1 && request.resource.data.chunkCount <= 16
+        && request.resource.data.visibility in ['members', 'matches', 'private']
+        && request.resource.data.allowedViewerIds is list && request.resource.data.allowedViewerIds.size() <= 200
+        && request.resource.data.updatedAt is timestamp;
+      allow delete: if isAdmin() || isUser(userId);
+
+      match /chunks/{chunkId} {
+        allow read: if canWatchIntroVideo(userId, get(/databases/$(database)/documents/introVideos/$(userId)).data);
+        allow create, update: if isUser(userId)
+          && request.resource.data.keys().hasOnly(['index', 'data'])
+          && request.resource.data.index is int
+          && request.resource.data.index >= 0 && request.resource.data.index < 16
+          && chunkId == string(request.resource.data.index)
+          && request.resource.data.data is string
+          && request.resource.data.data.size() <= 700000;
+        allow delete: if isAdmin() || isUser(userId);
+      }
+    }
+
     match /ratingSummaries/{userId} {
       allow read: if signedIn();
       allow create, update: if isAdmin() || ratingSummaryValid(userId);
