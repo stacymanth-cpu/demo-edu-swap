@@ -83,6 +83,86 @@ service cloud.firestore {
         && profile.get('weeklyAvailability', null) == user.get('weeklyAvailability', null);
     }
 
+    // ─── Free-plan replacements for the Cloud Functions ─────────────────────
+    // The project runs without Cloud Functions (they need the Blaze plan), so the
+    // browser performs session completion, cancellation, ratings and notifications
+    // in batched writes. The rules below check every document in those batches so
+    // a user cannot mint credits, fake ratings or spam strangers.
+
+    // Credits a completed session moves: the admin setting, or 10 by default.
+    function creditAmount() {
+      let settingsPath = /databases/$(database)/documents/settings/platform;
+      let configured = exists(settingsPath) ? get(settingsPath).data.get('creditsPerSession', 0) : 0;
+      return configured is int && configured > 0 ? configured : 10;
+    }
+
+    // True when this request moves sessionId from scheduled to completed by its learner.
+    function completesSession(sessionId) {
+      let sessionPath = /databases/$(database)/documents/sessions/$(sessionId);
+      return get(sessionPath).data.status == 'scheduled'
+        && get(sessionPath).data.learnerId == request.auth.uid
+        && getAfter(sessionPath).data.status == 'completed'
+        && getAfter(sessionPath).data.completedBy == request.auth.uid;
+    }
+
+    // A participant's balance change when their session is completed: +amount for the
+    // teacher, -amount for the learner (never below zero), and one more session each.
+    function sessionCreditUpdate(userId) {
+      let data = request.resource.data;
+      let sessionId = data.lastCreditSessionId;
+      let session = get(/databases/$(database)/documents/sessions/$(sessionId)).data;
+      return signedIn()
+        && data.diff(resource.data).affectedKeys().hasOnly(['credits', 'totalSessions', 'lastCreditSessionId'])
+        && sessionId is string
+        && completesSession(sessionId)
+        && data.totalSessions == resource.data.get('totalSessions', 0) + 1
+        && ((userId == session.teacherId && data.credits == resource.data.get('credits', 0) + creditAmount())
+          || (userId == session.learnerId && data.credits == resource.data.get('credits', 0) - creditAmount() && data.credits >= 0));
+    }
+
+    // Average rating rounded to two decimals, computed from a ratingSummaries document.
+    function ratingFromSummary(summary) {
+      return summary.count > 0 ? math.round(float(summary.total) * 100.0 / summary.count) / 100.0 : 0;
+    }
+
+    // A reviewer may set the reviewed student's rating, but only to the value implied by
+    // their rating summary after this request.
+    function ratingUpdate(userId) {
+      return signedIn()
+        && userId != request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating'])
+        && request.resource.data.rating == ratingFromSummary(getAfter(/databases/$(database)/documents/ratingSummaries/$(userId)).data);
+    }
+
+    function sessionBetween(session, a, b) {
+      return (session.teacherId == a && session.learnerId == b) || (session.teacherId == b && session.learnerId == a);
+    }
+
+    // Notifications written by the browser must come from the signed-in sender and point
+    // at a real chat, match, session or group call that links the sender and recipient.
+    function clientNotificationValid() {
+      let n = request.resource.data;
+      return signedIn()
+        && n.keys().hasOnly(['userId', 'type', 'title', 'body', 'read', 'createdAt', 'link', 'senderId', 'roomId', 'matchId', 'sessionId', 'groupRoomId'])
+        && n.senderId == request.auth.uid
+        && n.userId is string && n.userId != request.auth.uid
+        && n.read == false
+        && n.createdAt == request.time
+        && n.title is string && n.title.size() <= 120
+        && n.body is string && n.body.size() <= 300
+        && (!('link' in n) || (n.link is string && n.link.size() <= 300))
+        && ((n.type == 'message' && 'roomId' in n
+              && get(/databases/$(database)/documents/chatRooms/$(n.roomId)).data.participants.hasAll([request.auth.uid, n.userId]))
+          || (n.type == 'match_request' && 'matchId' in n
+              && getAfter(/databases/$(database)/documents/matches/$(n.matchId)).data.user1Id == request.auth.uid
+              && getAfter(/databases/$(database)/documents/matches/$(n.matchId)).data.user2Id == n.userId)
+          || (n.type in ['session_upcoming', 'session_cancelled', 'session_completed'] && 'sessionId' in n
+              && sessionBetween(getAfter(/databases/$(database)/documents/sessions/$(n.sessionId)).data, request.auth.uid, n.userId))
+          || (n.type == 'system' && 'groupRoomId' in n
+              && getAfter(/databases/$(database)/documents/groupCallRooms/$(n.groupRoomId)).data.hostId == request.auth.uid
+              && getAfter(/databases/$(database)/documents/groupCallRooms/$(n.groupRoomId)).data.participants.hasAny([n.userId])));
+    }
+
     match /users/{userId} {
       allow read: if isAdmin() || isUser(userId);
       allow create: if isUser(userId)
@@ -106,7 +186,33 @@ service cloud.firestore {
             || request.resource.data.get('registrationVerificationStatus', 'not_submitted') == 'pending')
           && (request.resource.data.get('studentVerified', false) == resource.data.get('studentVerified', false)
             || (request.resource.data.get('studentVerified', false) == false
-              && request.resource.data.get('registrationVerificationStatus', 'not_submitted') == 'pending')));
+              && request.resource.data.get('registrationVerificationStatus', 'not_submitted') == 'pending')))
+        || sessionCreditUpdate(userId)
+        || ratingUpdate(userId);
+      allow delete: if isAdmin();
+    }
+
+    // Running totals behind each student's average rating. A reviewer adds exactly
+    // their new review's stars, once, in the same batch that creates the review.
+    function ratingSummaryValid(userId) {
+      let data = request.resource.data;
+      let commentPath = /databases/$(database)/documents/comments/$(data.lastCommentId);
+      let comment = getAfter(commentPath).data;
+      let previousCount = resource == null ? 0 : resource.data.count;
+      let previousTotal = resource == null ? 0 : resource.data.total;
+      return signedIn()
+        && data.keys().hasOnly(['count', 'total', 'lastCommentId'])
+        && data.lastCommentId is string
+        && !exists(commentPath)
+        && comment.userId == request.auth.uid
+        && comment.targetUserId == userId
+        && data.count == previousCount + 1
+        && data.total == previousTotal + comment.rating;
+    }
+
+    match /ratingSummaries/{userId} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() || ratingSummaryValid(userId);
       allow delete: if isAdmin();
     }
 
@@ -114,6 +220,12 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update: if isAdmin()
         || (isUser(userId) && publicProfileMatchesUser(userId));
+      // Anyone may copy a student's rating or session count to their public profile,
+      // but only the exact values held on the private record after this request.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'totalSessions'])
+        && request.resource.data.get('rating', 0) == getAfter(/databases/$(database)/documents/users/$(userId)).data.get('rating', 0)
+        && request.resource.data.get('totalSessions', 0) == getAfter(/databases/$(database)/documents/users/$(userId)).data.get('totalSessions', 0);
       allow delete: if isAdmin();
     }
 
@@ -191,9 +303,33 @@ service cloud.firestore {
         && request.resource.data.matchId is string
         && acceptedMatchBetween(request.resource.data.matchId, request.resource.data.teacherId, request.resource.data.learnerId);
       allow update: if isAdmin()
+        // Completion: only the learner (who pays), after the start time, moving exactly the
+        // configured credits. Both balances and both ledger entries must change in the same batch.
+        || (signedIn()
+          && request.auth.uid == resource.data.learnerId
+          && resource.data.status == 'scheduled'
+          && resource.data.scheduledAt <= request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'creditsExchanged', 'completedBy', 'completedAt'])
+          && request.resource.data.status == 'completed'
+          && request.resource.data.completedBy == request.auth.uid
+          && request.resource.data.completedAt == request.time
+          && request.resource.data.creditsExchanged == creditAmount()
+          && getAfter(/databases/$(database)/documents/users/$(resource.data.teacherId)).data.get('lastCreditSessionId', '') == sessionId
+          && getAfter(/databases/$(database)/documents/users/$(resource.data.learnerId)).data.get('lastCreditSessionId', '') == sessionId
+          && existsAfter(/databases/$(database)/documents/transactions/$('tx-' + sessionId + '-teacher'))
+          && existsAfter(/databases/$(database)/documents/transactions/$('tx-' + sessionId + '-learner')))
+        // Cancellation: either participant, before the session starts, with a reason.
         || (isSessionParticipant(resource.data)
-          // Status changes (complete/cancel) go through the completeSession and
-          // cancelSession Cloud Functions, which use the Admin SDK.
+          && resource.data.status == 'scheduled'
+          && resource.data.scheduledAt > request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledBy', 'cancellationReason', 'cancelledAt'])
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.cancelledBy == request.auth.uid
+          && request.resource.data.cancelledAt == request.time
+          && request.resource.data.cancellationReason is string
+          && request.resource.data.cancellationReason.size() > 0
+          && request.resource.data.cancellationReason.size() <= 500)
+        || (isSessionParticipant(resource.data)
           && resource.data.status == 'scheduled'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'meetingLink', 'scheduledAt', 'notes',
@@ -207,11 +343,28 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Ledger entries for a session completion; ids are fixed per session and side, so
+    // each can be written once, in the batch that completes the session.
+    function ledgerEntryValid(transactionId) {
+      let data = request.resource.data;
+      let sessionId = data.sessionId;
+      let session = get(/databases/$(database)/documents/sessions/$(sessionId)).data;
+      return signedIn()
+        && data.keys().hasOnly(['userId', 'amount', 'type', 'sessionId', 'timestamp', 'description'])
+        && sessionId is string
+        && completesSession(sessionId)
+        && data.timestamp == request.time
+        && data.description is string && data.description.size() <= 200
+        && ((transactionId == 'tx-' + sessionId + '-teacher' && data.userId == session.teacherId
+              && data.amount == creditAmount() && data.type == 'earned_teaching')
+          || (transactionId == 'tx-' + sessionId + '-learner' && data.userId == session.learnerId
+              && data.amount == -creditAmount() && data.type == 'spent_learning'));
+    }
+
     match /transactions/{transactionId} {
       allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
-      // Credit balances and their ledger must only be written by a trusted
-      // callable function or Admin SDK, never by the browser.
-      allow write: if isAdmin();
+      allow create: if isAdmin() || ledgerEntryValid(transactionId);
+      allow update, delete: if isAdmin();
     }
 
     match /chatRooms/{roomId} {
@@ -307,7 +460,7 @@ service cloud.firestore {
       allow update: if signedIn()
         && resource.data.userId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow create: if isAdmin();
+      allow create: if isAdmin() || clientNotificationValid();
       allow delete: if isAdmin();
     }
 
@@ -399,7 +552,10 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read, write: if isAdmin();
+      // The platform document (credits per session, cancellation window) is needed by
+      // every client to complete sessions; it holds no personal data.
+      allow read: if isAdmin() || (signedIn() && settingId == 'platform');
+      allow write: if isAdmin();
     }
 
     match /auditLogs/{auditId} {

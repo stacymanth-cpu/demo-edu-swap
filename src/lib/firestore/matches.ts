@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import type { User, SkillMatch } from '../../types';
 import { sanitizeForFirestore, toDate } from './shared';
 import { getAllUsers } from './users';
+import { notifyUser } from './notifications';
 
 export async function getMatches(uid: string): Promise<SkillMatch[]> {
   // Get matches where user is either user1 or user2
@@ -95,8 +96,16 @@ export async function createMatch(data: Omit<SkillMatch, 'id' | 'user1' | 'user2
     throw new Error('Match request is missing required fields.');
   }
 
-  // The onMatchCreated Cloud Function notifies the other student.
   const docRef = await addDoc(collection(db, 'matches'), payload);
+  await notifyUser({
+    id: `match-${docRef.id}`,
+    userId: payload.user2Id,
+    type: 'match_request',
+    title: 'New match request',
+    body: payload.requestedSkill ? `Someone would like to learn ${payload.requestedSkill} with you.` : 'Someone would like to exchange skills with you.',
+    link: '/matches',
+    source: { matchId: docRef.id },
+  });
   return docRef.id;
 }
 

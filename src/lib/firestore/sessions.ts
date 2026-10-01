@@ -1,9 +1,10 @@
 // Scheduled learning sessions.
-import { collection, doc, getDocs, updateDoc, addDoc, query, where, onSnapshot, Timestamp, type DocumentData, type Unsubscribe, type QueryDocumentSnapshot } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { auth, db, functions } from '../firebase';
+import { collection, doc, getDocs, updateDoc, addDoc, query, where, onSnapshot, serverTimestamp, Timestamp, type DocumentData, type Unsubscribe, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { format } from 'date-fns';
+import { auth, db } from '../firebase';
 import type { Session } from '../../types';
 import { toDate } from './shared';
+import { notifyUser } from './notifications';
 
 export async function getSessions(uid: string): Promise<Session[]> {
   const q1 = query(collection(db, 'sessions'), where('teacherId', '==', uid));
@@ -78,18 +79,51 @@ const defaultBeforeSessionChecklist = {
 
 export async function createSession(data: Omit<Session, 'id'>): Promise<string> {
   if (!auth.currentUser) throw new Error('Please sign in to schedule a session.');
-  // The onSessionCreated Cloud Function notifies the other participant.
+  const creatorId = auth.currentUser.uid;
+  const scheduledAt = data.scheduledAt instanceof Date ? data.scheduledAt : new Date();
   const docRef = await addDoc(collection(db, 'sessions'), {
     ...data,
-    createdBy: auth.currentUser.uid,
-    scheduledAt: Timestamp.fromDate(data.scheduledAt instanceof Date ? data.scheduledAt : new Date()),
+    createdBy: creatorId,
+    scheduledAt: Timestamp.fromDate(scheduledAt),
     beforeSessionChecklist: data.beforeSessionChecklist ?? defaultBeforeSessionChecklist,
+  });
+  await notifyUser({
+    id: `session-${docRef.id}`,
+    userId: data.teacherId === creatorId ? data.learnerId : data.teacherId,
+    type: 'session_upcoming',
+    title: 'Session scheduled',
+    body: `${data.skill || 'A session'} is scheduled for ${format(scheduledAt, 'EEE d MMM, h:mm a')}.`,
+    link: '/sessions',
+    source: { sessionId: docRef.id },
   });
   return docRef.id;
 }
 
-/** Cancel via a trusted Cloud Function, which also notifies the other participant. */
-export async function cancelSession(session: Session, _cancelledBy: string, reason: string): Promise<void> {
-  const cancel = httpsCallable<{ sessionId: string; reason: string }, { status: 'cancelled' }>(functions, 'cancelSession');
-  await cancel({ sessionId: session.id, reason: reason.trim() });
+export const MAX_CANCELLATION_REASON_LENGTH = 500;
+
+/**
+ * Cancel a scheduled session before it starts and tell the other participant.
+ * The rules allow only participants, only before the start time, and require a reason.
+ */
+export async function cancelSession(session: Session, cancelledBy: string, reason: string): Promise<void> {
+  const trimmed = reason.trim();
+  if (!trimmed) throw new Error('Please provide a cancellation reason.');
+  if (trimmed.length > MAX_CANCELLATION_REASON_LENGTH) throw new Error(`Cancellation reason must be ${MAX_CANCELLATION_REASON_LENGTH} characters or fewer.`);
+  if (session.status !== 'scheduled') throw new Error('This session can no longer be cancelled.');
+  if (session.scheduledAt.getTime() <= Date.now()) throw new Error('This session has already started. Schedule a new session instead.');
+
+  await updateDoc(doc(db, 'sessions', session.id), {
+    status: 'cancelled',
+    cancelledBy,
+    cancellationReason: trimmed,
+    cancelledAt: serverTimestamp(),
+  });
+  await notifyUser({
+    userId: session.teacherId === cancelledBy ? session.learnerId : session.teacherId,
+    type: 'session_cancelled',
+    title: 'Session cancelled',
+    body: `${session.skill || 'Your'} session was cancelled: ${trimmed}`,
+    link: '/sessions',
+    source: { sessionId: session.id },
+  });
 }

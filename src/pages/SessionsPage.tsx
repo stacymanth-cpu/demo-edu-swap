@@ -3,7 +3,6 @@ import { Calendar, Clock, Video, Check, XCircle, X, Loader2, RefreshCw, External
 import { getSessions, subscribeSessions, cancelSession, updateSession, completeSessionWithCredits, createComment, getChatRooms, getComments } from '../lib/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { getUser } from '../lib/firestoreService';
 import { format } from 'date-fns';
 import type { Session } from '../types';
 import { downloadIcsFile, getGoogleCalendarUrl } from '../lib/calendar';
@@ -11,7 +10,7 @@ import { formatTimeZoneLabel, getSessionActionError, hasSchedulingConflict } fro
 import './SessionsPage.css';
 
 export function SessionsPage() {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'expired' | 'completed' | 'cancelled'>('all');
   const [sessionList, setSessionList] = useState<Session[]>([]);
@@ -99,13 +98,8 @@ export function SessionsPage() {
     }
     try {
       await completeSessionWithCredits(session);
+      // New credits and session count arrive through the live profile subscription (AuthContext).
       setSessionList(prev => prev.map(s => s.id === session.id ? { ...s, status: 'completed' as const } : s));
-      if (user) {
-        const updated = await getUser(user.uid);
-        if (updated) {
-          updateProfile({ credits: updated.credits, totalSessions: updated.totalSessions });
-        }
-      }
       setReviewRating(5);
       setReviewText('');
       setReviewError('');

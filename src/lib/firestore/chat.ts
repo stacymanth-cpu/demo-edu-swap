@@ -3,6 +3,7 @@ import { collection, doc, getDoc, getDocs, updateDoc, addDoc, deleteField, query
 import { auth, db } from '../firebase';
 import type { ChatRoom, ChatMessage } from '../../types';
 import { toDate } from './shared';
+import { notifyUser } from './notifications';
 import { dataUrlToBlob, readChunksAsBlob, readFileAsBase64, splitIntoChunks, temporaryObjectUrl, withTimeout, writeChunks } from './fileChunks';
 
 export async function getChatRooms(uid: string): Promise<ChatRoom[]> {
@@ -116,7 +117,7 @@ export function subscribeToChatMessages(
 }
 
 export async function sendChatMessage(roomId: string, message: Omit<ChatMessage, 'id'>): Promise<void> {
-  await addDoc(collection(db, 'chatRooms', roomId, 'messages'), {
+  const messageRef = await addDoc(collection(db, 'chatRooms', roomId, 'messages'), {
     ...message,
     timestamp: Timestamp.fromDate(message.timestamp instanceof Date ? message.timestamp : new Date()),
   });
@@ -129,6 +130,18 @@ export async function sendChatMessage(roomId: string, message: Omit<ChatMessage,
     ...(recipientId ? { [`unreadCount.${recipientId}`]: (roomSnap.data()?.unreadCount?.[recipientId] || 0) + 1 } : {}),
     [`typingBy.${message.senderId}`]: false,
   });
+
+  if (recipientId) {
+    await notifyUser({
+      id: `message-${messageRef.id}`,
+      userId: recipientId,
+      type: 'message',
+      title: `New message from ${auth.currentUser?.displayName || 'your chat partner'}`,
+      body: message.fileName ? `Shared a file: ${message.fileName}` : message.text || 'You received a new message',
+      link: '/chat',
+      source: { roomId },
+    });
+  }
 }
 
 export async function editChatMessage(roomId: string, messageId: string, text: string): Promise<void> {

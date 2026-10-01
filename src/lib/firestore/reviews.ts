@@ -1,5 +1,5 @@
 // Session reviews.
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, onSnapshot, Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc, query, where, onSnapshot, Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Session, Comment } from '../../types';
 import { writeAuditLog } from './admin';
@@ -34,11 +34,15 @@ export async function getAdminComments(): Promise<Comment[]> {
 }
 
 export async function removeComment(adminId: string, commentId: string): Promise<void> {
-  await updateDoc(doc(db, 'comments', commentId), {
+  const commentRef = doc(db, 'comments', commentId);
+  const targetUserId = (await getDoc(commentRef)).data()?.targetUserId;
+  await updateDoc(commentRef, {
     moderationStatus: 'removed',
     moderatedAt: Timestamp.fromDate(new Date()),
   });
   await writeAuditLog({ adminId, action: 'review_removed', targetId: commentId, details: 'Review hidden by administrator' });
+  // A hidden review no longer counts towards the student's rating.
+  if (typeof targetUserId === 'string' && targetUserId) await recalculateRating(targetUserId);
 }
 export async function createComment(data: Omit<Comment, 'id'> & { sessionId: string }): Promise<string> {
   const text = data.text.trim();
@@ -63,14 +67,48 @@ export async function createComment(data: Omit<Comment, 'id'> & { sessionId: str
   if (alreadyReviewed) throw new Error('You have already reviewed this session.');
 
   // The id makes the review unique per reviewer and session; the rules enforce it.
-  // The onCommentWritten Cloud Function recalculates the target's rating.
+  // The review, the reviewed student's running totals and their average rating are written
+  // together; the rules accept the totals only if they add exactly this review's stars.
   const reviewId = `${data.sessionId}_${data.userId}`;
-  await setDoc(doc(db, 'comments', reviewId), {
-    ...data,
-    text,
-    verifiedSession: true,
-    skill: data.skill || session.skill,
-    timestamp: Timestamp.fromDate(data.timestamp instanceof Date ? data.timestamp : new Date(data.timestamp)),
+  const targetUserId = data.targetUserId || '';
+  const summaryRef = doc(db, 'ratingSummaries', targetUserId);
+  const rating = await runTransaction(db, async transaction => {
+    const summary = await transaction.get(summaryRef);
+    const count = (summary.data()?.count ?? 0) + 1;
+    const total = (summary.data()?.total ?? 0) + data.rating;
+    transaction.set(doc(db, 'comments', reviewId), {
+      ...data,
+      text,
+      verifiedSession: true,
+      skill: data.skill || session.skill,
+      timestamp: Timestamp.fromDate(data.timestamp instanceof Date ? data.timestamp : new Date(data.timestamp)),
+    });
+    transaction.set(summaryRef, { count, total, lastCommentId: reviewId });
+    const average = averageFromTotals(count, total);
+    transaction.update(doc(db, 'users', targetUserId), { rating: average });
+    return average;
   });
+  // The public copy may only hold the private value, so a stale profile simply keeps its old rating.
+  await updateDoc(doc(db, 'publicProfiles', targetUserId), { rating }).catch(() => undefined);
   return reviewId;
+}
+
+/** Average rating rounded to two decimals; must match ratingFromSummary in firestore.rules. */
+export function averageFromTotals(count: number, total: number): number {
+  return count > 0 ? Math.round((total * 100) / count) / 100 : 0;
+}
+
+/** Admin: rebuild a student's rating from their visible reviews (used after moderation). */
+export async function recalculateRating(userId: string): Promise<void> {
+  const reviews = await getDocs(query(collection(db, 'comments'), where('targetUserId', '==', userId)));
+  const ratings = reviews.docs
+    .filter(review => review.data().moderationStatus !== 'removed')
+    .map(review => review.data().rating)
+    .filter((value): value is number => Number.isInteger(value) && value >= 1 && value <= 5);
+  const count = ratings.length;
+  const total = ratings.reduce((sum, value) => sum + value, 0);
+  const rating = averageFromTotals(count, total);
+  await setDoc(doc(db, 'ratingSummaries', userId), { count, total, lastCommentId: '' });
+  await updateDoc(doc(db, 'users', userId), { rating });
+  await updateDoc(doc(db, 'publicProfiles', userId), { rating }).catch(() => undefined);
 }

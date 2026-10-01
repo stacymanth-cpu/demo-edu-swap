@@ -3,16 +3,27 @@ import { collection, addDoc, doc, getDocs, query, where, onSnapshot, serverTimes
 import { db } from '../firebase';
 import type { CallHistoryEntry, GroupCallRoom } from '../../types';
 import { toDate } from './shared';
+import { notifyUser } from './notifications';
 
 export async function createGroupCallRoom(hostId: string, title: string, participantIds: string[]): Promise<string> {
+  const roomTitle = title.trim() || 'EduSwap group session';
+  const participants = Array.from(new Set([hostId, ...participantIds]));
   const docRef = await addDoc(collection(db, 'groupCallRooms'), {
     hostId,
-    title: title.trim() || 'EduSwap group session',
-    participants: Array.from(new Set([hostId, ...participantIds])),
+    title: roomTitle,
+    participants,
     createdAt: Timestamp.fromDate(new Date()),
     status: 'open',
   });
-  // The onGroupCallRoomCreated Cloud Function sends the invitations.
+  await Promise.all(participants.filter(userId => userId !== hostId).map(userId => notifyUser({
+    id: `group-${docRef.id}-${userId}`,
+    userId,
+    type: 'system',
+    title: 'Group call invitation',
+    body: `${roomTitle.slice(0, 120)} is ready to join.`,
+    link: `/group-call?room=${encodeURIComponent(docRef.id)}&title=${encodeURIComponent(roomTitle)}`,
+    source: { groupRoomId: docRef.id },
+  })));
   return docRef.id;
 }
 

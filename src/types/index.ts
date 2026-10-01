@@ -97,7 +97,7 @@ export interface Session {
   rescheduledFrom?: Date;
 }
 
-export type NotificationType = 'match_request' | 'message' | 'session_upcoming' | 'session_cancelled' | 'system';
+export type NotificationType = 'match_request' | 'message' | 'session_upcoming' | 'session_cancelled' | 'session_completed' | 'system';
 
 export interface Notification {
   id: string;
