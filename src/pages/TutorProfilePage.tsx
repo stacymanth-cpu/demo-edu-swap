@@ -87,7 +87,8 @@ export function TutorProfilePage() {
     }
   }, [learnOptions, teachOptions, selectedLearn, selectedTeach]);
 
-  const filteredReviews = comments.filter(c => !c.targetUserId || c.targetUserId === tutor?.uid);
+  // Only reviews written about this tutor; a review with no target belongs to nobody.
+  const filteredReviews = comments.filter(c => Boolean(tutor?.uid) && c.targetUserId === tutor?.uid);
   const averageReviewRating = filteredReviews.length ? filteredReviews.reduce((total, review) => total + review.rating, 0) / filteredReviews.length : 0;
   const verifiedReviewCount = filteredReviews.filter(review => review.verifiedSession).length;
   const ratingDistribution = [5, 4, 3, 2, 1].map(rating => ({ rating, count: filteredReviews.filter(review => review.rating === rating).length }));
