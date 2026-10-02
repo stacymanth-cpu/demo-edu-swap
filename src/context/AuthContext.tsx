@@ -7,7 +7,7 @@ import {
   updateProfile as fbUpdateProfile,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser } from '../lib/firestoreService';
+import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -112,6 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [user?.uid]);
 
+  // Students who have confirmed a university email are verified without admin review.
+  // The new status arrives through the profile subscription above.
+  useEffect(() => {
+    if (!user?.uid || user.studentVerified) return;
+    tryAutoVerifyStudent(false).catch(error => console.warn('Automatic student verification skipped:', error));
+  }, [user?.uid, user?.studentVerified]);
+
   // Returns null on success, or an error message string on failure
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     setIsLoading(true);
@@ -173,6 +180,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastSeen: null,
       };
       await createUser(newUser);
+      // A university email can verify the student instantly once they click the link.
+      try {
+        if (isUniversityEmail(details.email, await getVerifiedEmailDomains())) await sendUniversityVerificationEmail();
+      } catch (verificationError) {
+        console.warn('Could not send the verification email:', verificationError);
+      }
       setSessionExpiry();
       setUser(newUser);
       setSessionExpired(false);

@@ -5,6 +5,7 @@ import type { UserReport, SkillVerification, AuditLog, Announcement, SystemSetti
 import { createNotification } from './notifications';
 import { toDate } from './shared';
 import { getAllUsers } from './users';
+import { DEFAULT_VERIFIED_EMAIL_DOMAINS, normalizeDomains } from './emailVerification';
 
 export async function getAdminReports(): Promise<UserReport[]> {
   const snap = await getDocs(collection(db, 'reports'));
@@ -58,10 +59,11 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     creditsPerSession: typeof data.creditsPerSession === 'number' ? data.creditsPerSession : 10,
     verificationRequired: data.verificationRequired !== false,
     cancellationWindowHours: typeof data.cancellationWindowHours === 'number' ? data.cancellationWindowHours : 24,
+    verifiedEmailDomains: Array.isArray(data.verifiedEmailDomains) ? normalizeDomains(data.verifiedEmailDomains) : DEFAULT_VERIFIED_EMAIL_DOMAINS,
   };
 }
 
 export async function updateSystemSettings(adminId: string, settings: Omit<SystemSettings, 'id'>): Promise<void> {
-  await setDoc(doc(db, 'settings', 'platform'), settings);
+  await setDoc(doc(db, 'settings', 'platform'), { ...settings, verifiedEmailDomains: normalizeDomains(settings.verifiedEmailDomains) });
   await writeAuditLog({ adminId, action: 'system_settings_updated', details: JSON.stringify(settings) });
 }

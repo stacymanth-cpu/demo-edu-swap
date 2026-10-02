@@ -228,6 +228,33 @@ describe('introduction videos', () => {
   });
 });
 
+describe('automatic verification by university email', () => {
+  const verify = { studentVerified: true, registrationVerificationStatus: 'approved', verificationMethod: 'university_email', verifiedEmailDomain: 'ump.ac.za' };
+  const asEmail = (uid: string, email: string, emailVerified: boolean) =>
+    testEnv.authenticatedContext(uid, { email, email_verified: emailVerified }).firestore();
+
+  it('lets a student with a confirmed university email verify themselves', async () => {
+    await assertSucceeds(updateDoc(doc(asEmail('bob', '240283171@UMP.ac.za', true), 'users/bob'), verify));
+  });
+
+  it('blocks unconfirmed emails, other domains and other accounts', async () => {
+    await assertFails(updateDoc(doc(asEmail('bob', 'bob@ump.ac.za', false), 'users/bob'), verify));
+    await assertFails(updateDoc(doc(asEmail('bob', 'bob@gmail.com', true), 'users/bob'), { ...verify, verifiedEmailDomain: 'gmail.com' }));
+    await assertFails(updateDoc(doc(asEmail('bob', 'bob@ump.ac.za', true), 'users/alice'), verify));
+  });
+
+  it('blocks lying about the domain or sneaking in other changes', async () => {
+    await assertFails(updateDoc(doc(asEmail('bob', 'bob@gmail.com', true), 'users/bob'), verify));
+    await assertFails(updateDoc(doc(asEmail('bob', 'bob@ump.ac.za', true), 'users/bob'), { ...verify, credits: 999 }));
+  });
+
+  it('follows the admin list of domains', async () => {
+    await testEnv.withSecurityRulesDisabled(async context => updateDoc(doc(context.firestore(), 'settings/platform'), { verifiedEmailDomains: ['wits.ac.za'] }));
+    await assertFails(updateDoc(doc(asEmail('bob', 'bob@ump.ac.za', true), 'users/bob'), verify));
+    await assertSucceeds(updateDoc(doc(asEmail('bob', 'bob@wits.ac.za', true), 'users/bob'), { ...verify, verifiedEmailDomain: 'wits.ac.za' }));
+  });
+});
+
 describe('platform settings', () => {
   it('lets signed-in users read the platform document only', async () => {
     await assertSucceeds(getDoc(doc(as('bob'), 'settings/platform')));

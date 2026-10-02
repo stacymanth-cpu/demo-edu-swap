@@ -1246,3 +1246,22 @@
   .professional-fields { grid-template-columns: 1fr; }
   .profile-section { padding: 19px; }
 }
+
+/* Instant verification by university email */
+.university-email-card { display: grid; gap: 12px; margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--border-accent); border-radius: var(--radius-lg); background: var(--primary-50); }
+.university-email-head { display: flex; align-items: flex-start; gap: 10px; }
+.university-email-head > svg { flex: 0 0 auto; margin-top: 2px; color: var(--primary-600); }
+.university-email-head strong { color: var(--text-primary); font-size: 15px; }
+.university-email-head p { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.university-email-head p span { color: var(--text-primary); font-weight: 600; word-break: break-all; }
+.university-email-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.university-email-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--border-primary); border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; font-weight: 600; }
+.university-email-btn:hover:not(:disabled) { background: var(--gray-50); }
+.university-email-btn:disabled { opacity: 0.6; cursor: progress; }
+.university-email-btn.primary { border-color: var(--primary-500); background: var(--primary-500); color: #fff; }
+.university-email-btn.primary:hover:not(:disabled) { background: var(--primary-600); }
+.university-email-message { margin: 0; font-size: 13px; }
+.university-email-message.info { color: var(--text-secondary); }
+.university-email-message.error { color: var(--danger-600); }
+.university-email-note { display: flex; align-items: flex-start; gap: 7px; margin: 0 0 12px; color: var(--text-tertiary); font-size: 13px; line-height: 1.5; }
+.university-email-note svg { flex: 0 0 auto; margin-top: 2px; }

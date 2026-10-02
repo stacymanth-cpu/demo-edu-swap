@@ -32,6 +32,9 @@ export interface User {
   introductionVideoUrl?: string;
   registrationDocumentPath?: string;
   registrationVerificationStatus?: 'not_submitted' | 'pending' | 'approved' | 'rejected';
+  /** How the student was verified: automatically by university email, or by an admin reviewing a document. */
+  verificationMethod?: 'university_email' | 'document';
+  verifiedEmailDomain?: string;
   learningGoals?: string;
   preferredTeachingStyle?: 'visual' | 'practical' | 'discussion' | 'structured';
   languages?: string[];
@@ -164,6 +167,8 @@ export interface SystemSettings {
   creditsPerSession: number;
   verificationRequired: boolean;
   cancellationWindowHours: number;
+  /** University email domains (e.g. "ump.ac.za") whose confirmed owners are verified automatically. */
+  verifiedEmailDomains: string[];
 }
 
 export interface GroupCallRoom {

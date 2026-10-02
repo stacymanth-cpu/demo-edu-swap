@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { createGroupCallRoom, getSessions, getTransactions, getComments, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
 import { IntroVideoRecorder } from '../components/introVideo/IntroVideoRecorder';
 import { VerifiedBadge } from '../components/VerifiedBadge';
+import { UniversityEmailVerification } from '../components/UniversityEmailVerification';
 import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
 import { SkillPicker } from '../components/SkillPicker';
 import { format } from 'date-fns';
@@ -489,6 +490,7 @@ export function ProfilePage() {
 
         <section className="profile-section profile-section-wide animate-fade-in-up">
           <h2>Student verification</h2>
+          {!user.studentVerified && <UniversityEmailVerification email={user.email} />}
           <p className="verification-copy">{editing ? 'Upload proof of registration for admin review. Only approved students can accept tutor bookings.' : 'Only approved students can accept tutor bookings. Click Edit Profile to upload proof of registration.'}</p>
           {editing && <label className="registration-document-upload"><span>Registration document</span><input type="file" accept="application/pdf,image/jpeg,image/png" disabled={registrationUploading} onChange={async e => { const input = e.currentTarget; const file = input.files?.[0]; if (!file) return; setRegistrationUploadNotice(null); setRegistrationUploadProgress(0); setDisplayedRegistrationProgress(0); setRegistrationUploading(true); try { await uploadRegistrationDocument(user.uid, file, setRegistrationUploadProgress); setRegistrationUploadProgress(100); setDisplayedRegistrationProgress(100); setRegistrationUploadNotice({ type: 'success', message: '100% uploaded. Your verification is now pending admin approval.' }); } catch (error) { console.error('Registration upload failed:', error); setRegistrationUploadProgress(0); setDisplayedRegistrationProgress(0); setRegistrationUploadNotice({ type: 'error', message: error instanceof Error ? error.message : 'Document upload failed. Please check your connection and try again.' }); } finally { setRegistrationUploading(false); input.value = ''; } }} /><small className="upload-help">PDF, JPG, or PNG. Maximum file size: 5 MB.</small></label>}
           {(registrationUploading || registrationUploadProgress === 100) && <div className="registration-upload-progress"><div className="registration-upload-progress-label"><span>{displayedRegistrationProgress < 100 ? 'Uploading registration document' : 'Upload complete'}</span><strong>{displayedRegistrationProgress}%</strong></div><progress aria-label="Registration document upload progress" max={100} value={displayedRegistrationProgress}>{displayedRegistrationProgress}%</progress></div>}
