@@ -7,7 +7,7 @@ import {
   updateProfile as fbUpdateProfile,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
+import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -167,6 +167,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const name = `${details.firstName} ${details.lastName}`.trim();
+      // Check before creating the sign-in account; the rules refuse the profile anyway.
+      const universityDomains = await getVerifiedEmailDomains().catch(() => DEFAULT_VERIFIED_EMAIL_DOMAINS);
+      if (!isUniversityEmail(details.email, universityDomains)) {
+        setIsLoading(false);
+        return "Use your university email address to sign up. Personal emails such as Gmail or Outlook can't be used.";
+      }
       const cred = await createUserWithEmailAndPassword(auth, details.email, details.password);
 
       await fbUpdateProfile(cred.user, { displayName: name });

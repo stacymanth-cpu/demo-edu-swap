@@ -123,10 +123,16 @@ service cloud.firestore {
     // A student verifies themselves by university email: Firebase must certify the address as
     // confirmed (email_verified in the token) and its domain must be on the admin's list in
     // settings/platform (default ump.ac.za, matching DEFAULT_VERIFIED_EMAIL_DOMAINS in the app).
-    function universityEmailSelfVerification(userId) {
+    function approvedEmailDomains() {
       let settingsPath = /databases/$(database)/documents/settings/platform;
-      let domains = exists(settingsPath) ? get(settingsPath).data.get('verifiedEmailDomains', ['ump.ac.za']) : ['ump.ac.za'];
-      let domain = request.auth.token.email.lower().split('@')[1];
+      return exists(settingsPath) ? get(settingsPath).data.get('verifiedEmailDomains', ['ump.ac.za']) : ['ump.ac.za'];
+    }
+
+    function signInEmailDomain() {
+      return request.auth.token.email.lower().split('@')[1];
+    }
+
+    function universityEmailSelfVerification(userId) {
       let data = request.resource.data;
       return isUser(userId)
         && request.auth.token.email_verified == true
@@ -134,8 +140,8 @@ service cloud.firestore {
         && data.studentVerified == true
         && data.registrationVerificationStatus == 'approved'
         && data.verificationMethod == 'university_email'
-        && data.verifiedEmailDomain == domain
-        && domain in domains;
+        && data.verifiedEmailDomain == signInEmailDomain()
+        && signInEmailDomain() in approvedEmailDomains();
     }
 
     // Average rating rounded to two decimals, computed from a ratingSummaries document.
@@ -183,7 +189,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAdmin() || isUser(userId);
+      // New accounts must sign up with a university email (admin list in settings/platform);
+      // personal addresses such as Gmail are refused. Existing accounts are unaffected.
       allow create: if isUser(userId)
+        && signInEmailDomain() in approvedEmailDomains()
         && request.resource.data.uid == userId
         && request.resource.data.credits == 50
         && request.resource.data.get('isAdmin', false) != true
@@ -605,9 +614,10 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      // The platform document (credits per session, cancellation window) is needed by
-      // every client to complete sessions; it holds no personal data.
-      allow read: if isAdmin() || (signedIn() && settingId == 'platform');
+      // The platform document (credits per session, cancellation window, university email
+      // domains) is needed by every client, including the sign-up form before an account
+      // exists; it holds no personal data.
+      allow read: if isAdmin() || settingId == 'platform';
       allow write: if isAdmin();
     }
 

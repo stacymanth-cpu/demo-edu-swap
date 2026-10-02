@@ -256,10 +256,30 @@ describe('automatic verification by university email', () => {
 });
 
 describe('platform settings', () => {
-  it('lets signed-in users read the platform document only', async () => {
+  it('lets anyone read the platform document only, and nobody but admins change it', async () => {
     await assertSucceeds(getDoc(doc(as('bob'), 'settings/platform')));
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'settings/platform')));
     await assertFails(getDoc(doc(as('bob'), 'settings/secret')));
     await assertFails(setDoc(doc(as('bob'), 'settings/platform'), { creditsPerSession: 1 }));
+  });
+});
+
+describe('sign-up with a university email only', () => {
+  const newProfile = (uid: string) => ({ uid, displayName: 'New Student', credits: 50, studentVerified: false });
+  const signedUpAs = (uid: string, email: string) => testEnv.authenticatedContext(uid, { email }).firestore();
+
+  it('creates a profile for a university email', async () => {
+    await assertSucceeds(setDoc(doc(signedUpAs('newbie', 'newbie@UMP.ac.za'), 'users/newbie'), newProfile('newbie')));
+  });
+
+  it('refuses personal email addresses', async () => {
+    await assertFails(setDoc(doc(signedUpAs('gmailer', 'someone@gmail.com'), 'users/gmailer'), newProfile('gmailer')));
+    await assertFails(setDoc(doc(signedUpAs('outlooker', 'someone@outlook.com'), 'users/outlooker'), newProfile('outlooker')));
+  });
+
+  it('follows the admin list of university domains', async () => {
+    await testEnv.withSecurityRulesDisabled(async context => updateDoc(doc(context.firestore(), 'settings/platform'), { verifiedEmailDomains: ['ump.ac.za', 'wits.ac.za'] }));
+    await assertSucceeds(setDoc(doc(signedUpAs('witsie', 'witsie@wits.ac.za'), 'users/witsie'), newProfile('witsie')));
   });
 });
 

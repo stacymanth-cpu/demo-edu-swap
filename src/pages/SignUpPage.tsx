@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Coins, Eye, EyeOff, Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { skillsCatalog, universities } from '../data/mockData';
 import { validateEmail, validatePassword } from '../lib/validation';
+import { DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail } from '../lib/firestoreService';
 import logoImg from '../assets/logo.png';
 import './AuthPages.css';
 
@@ -18,6 +19,11 @@ export function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
+  // University email domains allowed to sign up (admin setting); the rules enforce the same list.
+  const [universityDomains, setUniversityDomains] = useState<string[]>(DEFAULT_VERIFIED_EMAIL_DOMAINS);
+  useEffect(() => {
+    getVerifiedEmailDomains().then(setUniversityDomains).catch(() => undefined);
+  }, []);
   const update = (name: keyof typeof form, value: string) => { setForm(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); };
   const fieldError = (name: string) => errors[name] ? <span className="field-error" role="alert">{errors[name]}</span> : null;
 
@@ -29,6 +35,7 @@ export function SignUpPage() {
     if (!form.studentNumber.trim()) next.studentNumber = 'Enter your student number.';
     if (!form.university) next.university = 'Select your university.';
     if (!validateEmail(form.email.trim())) next.email = 'Enter a valid university email address.';
+    else if (!isUniversityEmail(form.email, universityDomains)) next.email = `Use your university email (${universityDomains.map(domain => `@${domain}`).join(', ')}). Personal emails such as Gmail or Outlook can't be used to sign up.`;
     if (form.mobileNumber.trim() && !/^\+?[0-9\s()-]{7,20}$/.test(form.mobileNumber.trim())) next.mobileNumber = 'Enter a valid mobile number.';
     const passwordCheck = validatePassword(form.password);
     if (!passwordCheck.valid) next.password = passwordCheck.message || 'Enter a valid password.';
@@ -62,7 +69,7 @@ export function SignUpPage() {
         <div className="form-row"><Field id="first-name" label="First name" value={form.firstName} error={errors.firstName} onChange={value => update('firstName', value)} autoComplete="given-name" /><Field id="last-name" label="Last name" value={form.lastName} error={errors.lastName} onChange={value => update('lastName', value)} autoComplete="family-name" /></div>
         <Field id="student-number" label="Student number" value={form.studentNumber} error={errors.studentNumber} onChange={value => update('studentNumber', value)} />
         <div className="form-group"><label htmlFor="signup-university">University</label><select id="signup-university" value={form.university} onChange={event => update('university', event.target.value)} className={errors.university ? 'input-error' : ''}><option value="">Select your university</option>{universities.map(university => <option key={university.id} value={university.name}>{university.name}</option>)}</select>{fieldError('university')}</div>
-        <Field id="student-email" label="University email address" type="email" placeholder="student@university.ac.za" value={form.email} error={errors.email} onChange={value => update('email', value)} autoComplete="email" />
+        <Field id="student-email" label="University email address" type="email" placeholder={`student@${universityDomains[0] || 'university.ac.za'}`} value={form.email} error={errors.email} onChange={value => update('email', value)} autoComplete="email" />
         <Field id="mobile-number" label="Mobile number" optional type="tel" placeholder="+27 00 000 0000" value={form.mobileNumber} error={errors.mobileNumber} onChange={value => update('mobileNumber', value)} autoComplete="tel" />
         <div className="signup-skill-picks">
           <p className="field-hint">Popular starter skills. Choose at least one in each group; you can change these later.</p>
