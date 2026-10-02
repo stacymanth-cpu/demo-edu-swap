@@ -114,9 +114,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Students who have confirmed a university email are verified without admin review.
   // The new status arrives through the profile subscription above.
+  // Runs on sign-in, on page load (including returning from the email link's "Continue"), and
+  // whenever the student comes back to the tab after confirming the email elsewhere.
   useEffect(() => {
     if (!user?.uid || user.studentVerified) return;
-    tryAutoVerifyStudent(false).catch(error => console.warn('Automatic student verification skipped:', error));
+    let lastAttempt = 0;
+    const attempt = () => {
+      if (Date.now() - lastAttempt < 10_000) return;
+      lastAttempt = Date.now();
+      tryAutoVerifyStudent(false).catch(error => console.warn('Automatic student verification skipped:', error));
+    };
+    const onReturn = () => { if (document.visibilityState === 'visible') attempt(); };
+    attempt();
+    window.addEventListener('focus', onReturn);
+    document.addEventListener('visibilitychange', onReturn);
+    return () => {
+      window.removeEventListener('focus', onReturn);
+      document.removeEventListener('visibilitychange', onReturn);
+    };
   }, [user?.uid, user?.studentVerified]);
 
   // Returns null on success, or an error message string on failure

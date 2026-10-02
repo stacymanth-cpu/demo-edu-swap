@@ -39,11 +39,30 @@ export async function getVerifiedEmailDomains(): Promise<string[]> {
   return Array.isArray(saved) ? normalizeDomains(saved) : DEFAULT_VERIFIED_EMAIL_DOMAINS;
 }
 
-/** Send Firebase's "confirm your email" link to the signed-in student's address. */
+/**
+ * Send Firebase's "confirm your email" link to the signed-in student's address. After confirming,
+ * Firebase's page offers "Continue", which returns to the Profile, where the student is verified
+ * automatically on load. (The app's address must be an authorised domain in Firebase Auth;
+ * localhost and the project's own hosting domains are by default.)
+ */
 export async function sendUniversityVerificationEmail(): Promise<void> {
   const firebaseUser = auth.currentUser;
   if (!firebaseUser) throw new Error('Please sign in again.');
-  await sendEmailVerification(firebaseUser);
+  try {
+    await sendEmailVerification(firebaseUser, { url: `${window.location.origin}/profile` });
+  } catch (error) {
+    // An unauthorised return address should not stop the email; send it without "Continue".
+    if ((error as { code?: string })?.code === 'auth/unauthorized-continue-uri') await sendEmailVerification(firebaseUser);
+    else throw error;
+  }
+}
+
+/** True when the signed-in student's email is confirmed (refreshing from Firebase first). */
+export async function isEmailConfirmed(): Promise<boolean> {
+  const firebaseUser = auth.currentUser;
+  if (!firebaseUser) return false;
+  await firebaseUser.reload();
+  return firebaseUser.emailVerified;
 }
 
 export type AutoVerifyResult = 'verified' | 'already_verified' | 'not_university_email' | 'email_not_confirmed';
