@@ -1279,3 +1279,8 @@
 .university-email-message.error { color: var(--danger-600); }
 .university-email-note { display: flex; align-items: flex-start; gap: 7px; margin: 0 0 12px; color: var(--text-tertiary); font-size: 13px; line-height: 1.5; }
 .university-email-note svg { flex: 0 0 auto; margin-top: 2px; }
+
+/* "Your account is not verified" label under the name, linking to the verification section */
+.profile-unverified-label { display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin-top: 4px; padding: 4px 10px; border: 1px solid rgba(245, 158, 11, .45); border-radius: 999px; background: #fffbeb; color: #92400e; font-size: 13px; font-weight: 600; }
+.profile-unverified-label:hover { color: #78350f; text-decoration: underline; }
+#student-verification { scroll-margin-top: 16px; }

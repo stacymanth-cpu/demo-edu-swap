@@ -6,6 +6,7 @@ import { AdminRoute } from './components/AdminRoute';
 import { Sidebar } from './components/Sidebar';
 import { NetworkStatus } from './components/NetworkStatus';
 import { IncomingCallAlert } from './components/IncomingCallAlert';
+import { UnverifiedBanner } from './components/UnverifiedBanner';
 import './index.css';
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then(module => ({ default: module.LandingPage })));
@@ -40,6 +41,7 @@ function AppLayout() {
       {!hideSidebar && <Sidebar />}
       {user && <IncomingCallAlert />}
       <main id="main-content" tabIndex={-1} className={`main-content ${hideSidebar ? 'no-sidebar' : ''}`}>
+        {!hideSidebar && !isChatPage && <UnverifiedBanner />}
         <Suspense fallback={<div className="route-loading" role="status"><span className="skeleton skeleton-title" /><span className="skeleton skeleton-card" /><span className="sr-only">Loading page</span></div>}>
         <Routes>
           <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />

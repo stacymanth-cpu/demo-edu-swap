@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
-import { Star, MapPin, BookOpen, Coins, Calendar, TrendingUp, ArrowUp, ArrowDown, Loader2, Pencil, X, Plus, Save, Camera, BadgeCheck, CircleCheck, Circle, ChevronDown, ShieldCheck, UserRoundCheck, Video, Award, Eye, Trash2 } from 'lucide-react';
+import { Star, MapPin, BookOpen, Coins, Calendar, TrendingUp, ArrowUp, ArrowDown, Loader2, Pencil, X, Plus, Save, Camera, BadgeCheck, CircleCheck, Circle, ChevronDown, ShieldAlert, ShieldCheck, UserRoundCheck, Video, Award, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createGroupCallRoom, getSessions, getTransactions, getComments, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
 import { IntroVideoRecorder } from '../components/introVideo/IntroVideoRecorder';
@@ -140,6 +140,12 @@ export function ProfilePage() {
       setLinkedStudents(matches.filter(match => match.status === 'accepted'));
     });
   }, [user]);
+
+  // "Verify now" links to /profile#student-verification; scroll there once the page has loaded.
+  useEffect(() => {
+    if (loading || window.location.hash !== '#student-verification') return;
+    document.getElementById('student-verification')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [loading]);
 
   if (!user) return null;
 
@@ -354,6 +360,12 @@ export function ProfilePage() {
           ) : (
             <h1>{user.displayName}{user.studentVerified && <VerifiedBadge size={24} />}</h1>
           )}
+          {!user.studentVerified && (
+            <a href="#student-verification" className="profile-unverified-label">
+              <ShieldAlert size={14} aria-hidden="true" />
+              {user.registrationVerificationStatus === 'pending' ? 'Not verified yet: awaiting admin review' : 'Your account is not verified'}
+            </a>
+          )}
 
           <div className="profile-meta">
             <span><MapPin size={14} /> {user.university}</span>
@@ -488,7 +500,7 @@ export function ProfilePage() {
           {editing && <IntroVideoRecorder disabled={saving} onRecorded={selectIntroductionVideo} />}
         </section>
 
-        <section className="profile-section profile-section-wide animate-fade-in-up">
+        <section className="profile-section profile-section-wide animate-fade-in-up" id="student-verification">
           <h2>Student verification</h2>
           {!user.studentVerified && <UniversityEmailVerification email={user.email} />}
           {/* Once verified, read mode shows only the status; the explanations appear while editing. */}

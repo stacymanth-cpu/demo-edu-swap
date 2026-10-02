@@ -1,0 +1,51 @@
+.unverified-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Lines up with the page content, which is centred at --page-max-width with --page-padding. */
+  width: calc(100% - 2 * var(--page-padding));
+  max-width: calc(var(--page-max-width) - 2 * var(--page-padding));
+  margin: 16px auto 0;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: var(--radius-md);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.unverified-banner.rejected { border-color: rgba(239, 68, 68, 0.4); background: #fef2f2; color: #991b1b; }
+.unverified-banner > svg { flex: 0 0 auto; }
+.unverified-banner p { flex: 1; min-width: 0; margin: 0; }
+
+.unverified-banner-action {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: #92400e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.unverified-banner.rejected .unverified-banner-action { background: #991b1b; }
+.unverified-banner-action:hover { color: #fff; opacity: 0.9; }
+
+.unverified-banner > button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: inherit;
+}
+
+.unverified-banner > button:hover { background: rgba(146, 64, 14, 0.1); }
+
+@media (max-width: 600px) {
+  .unverified-banner { flex-wrap: wrap; }
+  .unverified-banner p { flex-basis: calc(100% - 70px); }
+}
