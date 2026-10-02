@@ -1196,12 +1196,26 @@
 }
 
 .verification-status {
-  padding: 4px 9px;
-  border: 1px solid rgba(148, 163, 184, .18);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  width: fit-content;
+  margin-left: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--border-primary);
   border-radius: 999px;
-  background: rgba(15,23,42,.38);
+  background: var(--gray-50);
+  color: var(--text-secondary);
+  font-size: 13px;
   font-weight: 650;
+  text-transform: capitalize;
 }
+
+/* Status colours on the light theme. */
+.verification-status.approved { border-color: rgba(13, 148, 136, .35); background: #f0fdfa; color: #115e59; }
+.verification-status.pending { border-color: rgba(245, 158, 11, .4); background: #fffbeb; color: #92400e; }
+.verification-status.rejected { border-color: rgba(239, 68, 68, .35); background: #fef2f2; color: #991b1b; }
 
 .profile-skill-chip {
   padding: 7px 11px;
