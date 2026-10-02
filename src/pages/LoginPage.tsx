@@ -4,6 +4,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Mail, ArrowLeft } from 'lucide-react'
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
+import { getRememberedEmail } from '../lib/rememberedLogin';
 import { validateEmail } from '../lib/validation';
 import logoImg from '../assets/logo.png';
 import './AuthPages.css';
@@ -11,8 +12,9 @@ import './AuthPages.css';
 export function LoginPage() {
   const { login, isLoading, sessionExpired } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(getRememberedEmail);
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -51,7 +53,7 @@ export function LoginPage() {
       hasError = true;
     }
     if (hasError) return;
-    const errorMsg = await login(cleanEmail, cleanPassword);
+    const errorMsg = await login(cleanEmail, cleanPassword, rememberMe);
     if (errorMsg) {
       setError(errorMsg);
     } else {
@@ -130,6 +132,7 @@ export function LoginPage() {
               <input
                 type="email"
                 id="email"
+                name="email"
                 placeholder="you@university.ac.za"
                 value={email}
                 onChange={e => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
@@ -150,6 +153,7 @@ export function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  name="password"
                   placeholder="Enter your password"
                   value={password}
                   onChange={e => { setPassword(e.target.value); if (passwordError) setPasswordError(''); }}
@@ -165,6 +169,12 @@ export function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <label className="remember-me" htmlFor="remember-me">
+              <input id="remember-me" type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
+              <span>Remember me on this device</span>
+            </label>
+            <p className="remember-me-hint">{rememberMe ? 'You stay signed in for 30 days.' : 'You will be signed out after 8 hours. Best for shared computers.'}</p>
 
             <button type="submit" className="auth-submit" disabled={isLoading} id="btn-login">
               {isLoading ? (

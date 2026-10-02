@@ -9,24 +9,29 @@ import {
 import { auth } from '../lib/firebase';
 import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
 import type { User } from '../types';
+import { rememberEmail } from '../lib/rememberedLogin';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   authReady: boolean;
   sessionExpired: boolean;
-  login: (email: string, password: string) => Promise<string | null>;
+  /** remember: stay signed in for 30 days and prefill the email next time (default), or 8 hours. */
+  login: (email: string, password: string, remember?: boolean) => Promise<string | null>;
   signup: (details: { firstName: string; lastName: string; studentNumber: string; email: string; mobileNumber?: string; password: string; university: string; skillsTeach: string[]; skillsLearn: string[] }) => Promise<string | null>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<void>;
 }
 
-const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+// "Remember me" keeps a student signed in on their own device for 30 days; without it the
+// session ends after 8 hours, which suits shared or lab computers.
+const SHORT_SESSION_MS = 8 * 60 * 60 * 1000;
+const REMEMBERED_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_KEY = 'eduswap_session_expires_at';
 const SESSION_EXPIRED_KEY = 'eduswap_session_expired';
 
-function setSessionExpiry() {
-  localStorage.setItem(SESSION_KEY, String(Date.now() + SESSION_TTL_MS));
+function setSessionExpiry(remember = true) {
+  localStorage.setItem(SESSION_KEY, String(Date.now() + (remember ? REMEMBERED_SESSION_MS : SHORT_SESSION_MS)));
   localStorage.removeItem(SESSION_EXPIRED_KEY);
 }
 
@@ -135,11 +140,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.uid, user?.studentVerified]);
 
   // Returns null on success, or an error message string on failure
-  const login = useCallback(async (email: string, password: string): Promise<string | null> => {
+  const login = useCallback(async (email: string, password: string, remember = true): Promise<string | null> => {
     setIsLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      setSessionExpiry();
+      setSessionExpiry(remember);
+      rememberEmail(email, remember);
       const profile = await getUser(cred.user.uid);
       if (profile) {
         if (profile.accountStatus === 'suspended' || profile.accountStatus === 'deactivated') {

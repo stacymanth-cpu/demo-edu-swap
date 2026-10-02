@@ -409,3 +409,8 @@
   .signup-privacy { margin-top: 12px; }
   .auth-container-wide > .auth-form { padding: 26px 22px; }
 }
+
+/* Remember me */
+.remember-me { display: flex; align-items: center; gap: 9px; margin: 2px 0 2px; color: var(--text-primary); font-size: 14px; cursor: pointer; }
+.remember-me input { width: 17px; height: 17px; accent-color: var(--primary-600); flex: 0 0 auto; }
+.remember-me-hint { margin: 0 0 6px 26px; color: var(--text-tertiary); font-size: 12px; }
