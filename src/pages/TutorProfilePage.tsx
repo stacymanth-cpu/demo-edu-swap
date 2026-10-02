@@ -269,10 +269,11 @@ export function TutorProfilePage() {
           </div>
           {tutor.learningGoals && <div className="tutor-booking-tip"><BookOpen size={16} /> Learning goals: {tutor.learningGoals}</div>}
           {tutor.weeklyAvailability?.length ? <div className="tutor-booking-tip"><Clock size={16} /> Available: {tutor.weeklyAvailability.map(slot => `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][slot.day]} ${slot.start}-${slot.end}`).join(' · ')}</div> : <div className="tutor-booking-tip"><Clock size={16} /> This tutor has not listed weekly availability yet.</div>}
-          {/* Verified students carry the badge by their name; only the pending state needs a note here. */}
+          {/* Verified students carry the badge by their name. Others get a neutral note: the public profile
+              does not reveal whether a document was submitted, so it never claims "pending". */}
           {!tutor.studentVerified && (
             <div className="tutor-verification-status">
-              <span className="verification-pill unverified">Student verification pending</span>
+              <span className="verification-pill unverified">Not verified yet</span>
             </div>
           )}
           {canViewIntroductionVideo && <div className="tutor-introduction-video"><h3>Introduction video</h3><IntroVideoPlayer userId={tutor.uid} videoUrl={tutor.introductionVideoUrl} onUnavailable={() => setIntroVideoUnavailable(true)} /></div>}
@@ -283,7 +284,7 @@ export function TutorProfilePage() {
             <CalendarPlus size={20} />
             <div>
               <h2>Book a session</h2>
-              <p>{tutor.studentVerified ? 'Choose date, time and specify your learning goal.' : 'This student is awaiting university verification before offering tutoring.'}</p>
+              <p>{tutor.studentVerified ? 'Choose date, time and specify your learning goal.' : 'This student is not verified yet, so they cannot accept tutoring bookings.'}</p>
             </div>
           </div>
 
