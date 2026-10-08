@@ -40,6 +40,18 @@ npm run test:rules
 
 Run them after any change to `firestore.rules`.
 
+Browser tests sign in (login PIN included), search Explore, send and accept a match,
+chat between two students, complete a session and check that credits move once. They
+start the Auth and Firestore emulators, the app on port 5199 and the PIN server on port
+8799, all under `demo-eduswap`, so they never touch real data. They also need Java 21:
+
+```bash
+npx playwright install chromium   # first time only
+npm run test:e2e
+```
+
+Screenshots and traces of failed tests are saved in `e2e/.output/`.
+
 ## Build
 
 ```bash

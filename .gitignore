@@ -35,3 +35,6 @@ dist-ssr
 # Firebase local cache and build output
 .firebase/
 functions/lib/
+
+# Browser test output (npm run test:e2e)
+e2e/.output/
