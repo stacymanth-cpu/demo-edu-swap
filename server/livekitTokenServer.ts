@@ -6,7 +6,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { AccessToken } from 'livekit-server-sdk';
 import nodemailer from 'nodemailer';
 
-const port = Number(process.env.LIVEKIT_TOKEN_PORT || 8787);
+// Hosts such as Render assign the port through PORT.
+const port = Number(process.env.PORT || process.env.LIVEKIT_TOKEN_PORT || 8787);
 const liveKitApiKey = process.env.LIVEKIT_API_KEY;
 const liveKitApiSecret = process.env.LIVEKIT_API_SECRET;
 // Comma-separated list, e.g. "http://localhost:5173,http://127.0.0.1:5173".
@@ -16,15 +17,22 @@ if (!liveKitApiKey || !liveKitApiSecret) {
   throw new Error('LIVEKIT_API_KEY and LIVEKIT_API_SECRET are required.');
 }
 
-// Login PINs are emailed from a Gmail account using an app password
+// Login PINs are emailed either through Brevo's email API (BREVO_API_KEY, sent over HTTPS,
+// for hosts that block outgoing SMTP) or from a Gmail account using an app password
 // (Google Account > Security > 2-Step Verification > App passwords).
 const smtpUser = process.env.SMTP_USER;
 const smtpPass = process.env.SMTP_PASS?.replace(/\s/g, '');
-const mailer = smtpUser && smtpPass
+const brevoApiKey = process.env.BREVO_API_KEY;
+// The sender address; with Brevo it must be a sender verified in the Brevo account.
+const mailFrom = process.env.MAIL_FROM || smtpUser;
+const mailer = !brevoApiKey && smtpUser && smtpPass
   ? nodemailer.createTransport({ service: 'gmail', auth: { user: smtpUser, pass: smtpPass } })
   : null;
-if (!mailer) {
-  console.warn('SMTP_USER/SMTP_PASS are not set: login PINs will be printed here instead of emailed (local testing only).');
+if (brevoApiKey && !mailFrom) {
+  throw new Error('Set MAIL_FROM to the sender address verified in Brevo.');
+}
+if (!brevoApiKey && !mailer) {
+  console.warn('No email settings (BREVO_API_KEY, or SMTP_USER/SMTP_PASS): login PINs will be printed here instead of emailed (local testing only).');
 }
 
 const PIN_TTL_MS = 10 * 60 * 1000;
@@ -143,18 +151,27 @@ async function handleSendPin(request: IncomingMessage, response: ServerResponse)
     attempts: 0,
   });
 
-  if (mailer) {
-    await mailer.sendMail({
-      from: `"EduSwap" <${smtpUser}>`,
-      to: decoded.email,
-      subject: `${pin} is your EduSwap sign-in PIN`,
-      text: `Your EduSwap sign-in PIN is ${pin}.\n\nIt expires in 10 minutes. If you did not try to sign in, change your password.`,
-      html: `<p>Your EduSwap sign-in PIN is:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">${pin}</p><p>It expires in 10 minutes. If you did not try to sign in, change your password.</p>`,
-    });
-  } else {
-    console.log(`[login PIN] ${decoded.email}: ${pin}`);
-  }
+  await sendPinEmail(decoded.email, pin);
   sendJson(request, response, 200, { sent: true, email: decoded.email });
+}
+
+async function sendPinEmail(to: string, pin: string): Promise<void> {
+  const subject = `${pin} is your EduSwap sign-in PIN`;
+  const text = `Your EduSwap sign-in PIN is ${pin}.\n\nIt expires in 10 minutes. If you did not try to sign in, change your password.`;
+  const html = `<p>Your EduSwap sign-in PIN is:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">${pin}</p><p>It expires in 10 minutes. If you did not try to sign in, change your password.</p>`;
+
+  if (brevoApiKey) {
+    const result = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': brevoApiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ sender: { name: 'EduSwap', email: mailFrom }, to: [{ email: to }], subject, textContent: text, htmlContent: html }),
+    });
+    if (!result.ok) throw new Error(`Brevo refused the PIN email (${result.status}): ${await result.text()}`);
+  } else if (mailer) {
+    await mailer.sendMail({ from: `"EduSwap" <${mailFrom}>`, to, subject, text, html });
+  } else {
+    console.log(`[login PIN] ${to}: ${pin}`);
+  }
 }
 
 async function handleVerifyPin(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -201,6 +218,11 @@ const routes: Record<string, (request: IncomingMessage, response: ServerResponse
 const server = createServer(async (request, response) => {
   if (request.method === 'OPTIONS') {
     sendJson(request, response, 204, {});
+    return;
+  }
+  // For the host's health check and uptime monitors that keep a free instance awake.
+  if (request.method === 'GET' && request.url === '/healthz') {
+    sendJson(request, response, 200, { ok: true });
     return;
   }
   const handler = request.method === 'POST' && request.url ? routes[request.url] : undefined;

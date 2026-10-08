@@ -18,10 +18,9 @@ const env = {
   LIVEKIT_API_KEY: 'e2e-key',
   LIVEKIT_API_SECRET: 'e2e-secret-e2e-secret-e2e-secret-00',
 };
-// Never send real email or use real credentials from the developer's shell.
-delete env.SMTP_USER;
-delete env.SMTP_PASS;
-delete env.GOOGLE_APPLICATION_CREDENTIALS;
+// Never send real email or use real credentials from the developer's shell, and listen on
+// LIVEKIT_TOKEN_PORT rather than any PORT the shell sets.
+for (const name of ['SMTP_USER', 'SMTP_PASS', 'BREVO_API_KEY', 'MAIL_FROM', 'GOOGLE_APPLICATION_CREDENTIALS', 'PORT']) delete env[name];
 
 const server = spawn('npx', ['tsx', 'server/livekitTokenServer.ts'], { env, shell: true });
 for (const stream of [server.stdout, server.stderr]) {

@@ -1,0 +1,36 @@
+# Render Blueprint for the EduSwap server (login PINs + group-call tokens), free plan.
+# In Render: New > Blueprint > pick this repository. Values marked sync: false are asked
+# for during setup and stay in Render, never in git. See README "Hosting the PIN server".
+services:
+  - type: web
+    name: eduswap-pin-server
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npx tsx server/livekitTokenServer.ts
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Sites allowed to call the server, comma-separated (your live site, e.g. https://eduswap.netlify.app).
+      - key: APP_ORIGIN
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      # Path of the Secret File holding the Firebase service-account JSON.
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase-service-account.json
+      # PIN email: set SMTP_USER and SMTP_PASS (Gmail app password), or BREVO_API_KEY and
+      # MAIL_FROM if Gmail cannot connect from the host. Leave the unused pair empty.
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false

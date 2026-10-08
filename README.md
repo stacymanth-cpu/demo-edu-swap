@@ -164,3 +164,23 @@ The same server emails the 6-digit login PIN asked for at every sign-in. Set
 `SMTP_USER` and `SMTP_PASS` (a Gmail app password) in `.env.local`; while they are
 empty, the server prints each PIN in its terminal instead (local testing only). If
 the server is not running, students cannot finish signing in.
+
+## Hosting the PIN server (free)
+
+The server runs on Render's free plan using `render.yaml`. Free instances sleep after
+15 minutes without requests, so the first sign-in after a quiet spell waits up to a
+minute; an uptime monitor calling `/healthz` every 10 minutes keeps it awake.
+
+1. On render.com, sign in with GitHub, choose **New > Blueprint** and pick this repository.
+2. Fill in the values it asks for: `APP_ORIGIN` (your live site), the three `LIVEKIT_*`
+   values, and either `SMTP_USER`/`SMTP_PASS` or `BREVO_API_KEY`/`MAIL_FROM`.
+3. Under the service's **Environment > Secret Files**, add `firebase-service-account.json`
+   with the contents of your Firebase service-account key.
+4. Once it is live, `https://<service>.onrender.com/healthz` returns `{"ok":true}`.
+5. Build the website with
+   `VITE_LIVEKIT_TOKEN_ENDPOINT=https://<service>.onrender.com/api/livekit/token`.
+   The build adds that address to the Content Security Policy automatically.
+
+If PIN emails never arrive and the Render logs show a connection timeout to Gmail, the
+host is blocking outgoing SMTP: create a free Brevo account, verify your sender address,
+and set `BREVO_API_KEY` and `MAIL_FROM` instead.

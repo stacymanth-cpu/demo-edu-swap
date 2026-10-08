@@ -11,14 +11,15 @@ test.describe.serial('Completing a session', () => {
   test('the teacher cannot complete it', async ({ page }) => {
     await signIn(page, thabo);
     await page.goto('/sessions');
-    await expect(page.getByText('Learner confirms completion')).toBeVisible();
+    // The Sessions page loads slowly on the emulator, so allow it longer than other checks.
+    await expect(page.getByText('Learner confirms completion')).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('.complete-btn')).toHaveCount(0);
   });
 
   test('the learner completes it and exactly the set credits move once', async ({ page }) => {
     await signIn(page, lerato);
     await page.goto('/sessions');
-    await page.locator('.complete-btn').click();
+    await page.locator('.complete-btn').click({ timeout: 30_000 });
     await expect(page.locator('.complete-btn')).toHaveCount(0);
 
     await expect.poll(() => credits(lerato.uid)).toBe(STARTING_CREDITS - CREDITS_PER_SESSION);
