@@ -87,7 +87,10 @@
 .student-registration-form .form-group { margin-bottom: 13px; }
 .student-registration-form .auth-subtitle { margin-bottom: 20px; }
 .optional-label { margin-left: 5px; color: var(--text-tertiary); font-size: 11px; font-weight: 400; }
-.password-guidance { margin: -5px 0 15px; }
+.password-guidance { display: grid; gap: 5px; margin: 8px 0 15px; padding: 0; list-style: none; }
+.password-guidance li { display: flex; align-items: center; gap: 7px; color: var(--danger-600); font-size: 12px; line-height: 1.4; }
+.password-guidance li.met { color: var(--success-500); }
+.password-guidance svg { flex: 0 0 auto; }
 .registration-consents { display: grid; gap: 8px; margin: 4px 0 16px; }
 .registration-consents label { display: flex; align-items: flex-start; gap: 9px; color: var(--text-secondary); font-size: 12px; line-height: 1.45; cursor: pointer; }
 .registration-consents label.has-error { color: var(--danger-600); }
@@ -101,6 +104,10 @@
 .skill-onboarding { display: grid; gap: 20px; }
 .skill-onboarding fieldset { border: 0; padding: 0; min-width: 0; }
 .skill-onboarding legend { display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-weight: 700; margin-bottom: 10px; }
+.signup-skill-picks { display: grid; gap: 14px; margin-bottom: 16px; }
+.signup-skill-picks .field-hint { margin: 0; font-size: 12px; color: var(--text-tertiary); }
+.signup-skill-group { border: 0; padding: 0; margin: 0; min-width: 0; }
+.signup-skill-group legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
 .onboarding-skill-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 150px; overflow-y: auto; padding: 2px; }
 .onboarding-skill-grid button { padding: 8px 11px; border: 1px solid var(--border-primary); border-radius: 999px; color: var(--text-secondary); background: var(--bg-secondary); }
 .onboarding-skill-grid button.selected { color: var(--primary-700); border-color: var(--primary-500); background: rgba(79, 70, 229, .1); }
@@ -358,6 +365,29 @@
 
 .back-to-login:hover {
   color: var(--primary-600);
+}
+
+.pin-input {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pin-notice {
+  background: #f0fdf4;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--accent-600);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.forgot-link:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .reset-success {

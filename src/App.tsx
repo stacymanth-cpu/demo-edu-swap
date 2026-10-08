@@ -23,16 +23,19 @@ const TutorProfilePage = lazy(() => import('./pages/TutorProfilePage').then(modu
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage').then(module => ({ default: module.AdminLoginPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
 const GroupCallPage = lazy(() => import('./pages/GroupCallPage').then(module => ({ default: module.GroupCallPage })));
+const LoginPinPage = lazy(() => import('./pages/LoginPinPage').then(module => ({ default: module.LoginPinPage })));
 
 function AppLayout() {
-  const { user, authReady } = useAuth();
+  const { user, authReady, pinEmail } = useAuth();
   const location = useLocation();
   const isAuthPage = ['/login', '/signup'].includes(location.pathname);
   const isChatPage = location.pathname === '/chat';
   const isLanding = location.pathname === '/' && !user;
+  // Signed in with a password but the emailed PIN has not been entered yet.
+  const awaitingPin = !user && pinEmail !== null;
 
   // Don't show sidebar on landing or auth pages
-  const hideSidebar = isAuthPage || isLanding || !authReady;
+  const hideSidebar = isAuthPage || isLanding || !authReady || awaitingPin;
 
   return (
     <div className={`app-layout ${hideSidebar ? '' : 'with-sidebar'} ${isChatPage && !isLanding ? 'chat-layout' : ''}`}>
@@ -43,6 +46,7 @@ function AppLayout() {
       <main id="main-content" tabIndex={-1} className={`main-content ${hideSidebar ? 'no-sidebar' : ''}`}>
         {!hideSidebar && !isChatPage && <UnverifiedBanner />}
         <Suspense fallback={<div className="route-loading" role="status"><span className="skeleton skeleton-title" /><span className="skeleton skeleton-card" /><span className="sr-only">Loading page</span></div>}>
+        {awaitingPin ? <LoginPinPage /> : (
         <Routes>
           <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />
           <Route path="/signup" element={<AuthRedirect><SignUpPage /></AuthRedirect>} />
@@ -60,6 +64,7 @@ function AppLayout() {
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        )}
         </Suspense>
       </main>
     </div>

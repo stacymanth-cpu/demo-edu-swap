@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateEmail, validatePassword, validateProfile } from './validation';
+import { getPasswordRequirements, validateEmail, validatePassword, validateProfile } from './validation';
 
 describe('validation utilities', () => {
   it('validateEmail accepts valid emails and rejects invalid ones', () => {
@@ -33,6 +33,15 @@ describe('validation utilities', () => {
 
     const good = validatePassword('Abcd3fgh!@');
     expect(good.valid).toBe(true);
+  });
+
+  it('reports password requirement status for live guidance', () => {
+    const requirements = getPasswordRequirements('Abcd3fgh!@');
+
+    expect(requirements).toHaveLength(7);
+    expect(requirements.every(requirement => requirement.met)).toBe(true);
+    expect(getPasswordRequirements('Abcd 3fgh!@').find(requirement => requirement.label === 'No spaces')?.met).toBe(false);
+    expect(getPasswordRequirements('short').find(requirement => requirement.label === 'At least 10 characters')?.met).toBe(false);
   });
 
   it('validateProfile rejects oversized or incomplete profile data', () => {

@@ -390,3 +390,24 @@ describe('trusted-only data', () => {
     await assertFails(updateDoc(doc(as('alice'), 'users/alice'), { rating: 5 }));
   });
 });
+
+describe('login PIN', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'loginVerifications/bob'), { authTime: 1 });
+      await setDoc(doc(context.firestore(), 'loginPins/bob'), { hash: 'x', authTime: 1, attempts: 0 });
+    });
+  });
+
+  it('lets a user read only their own passed sign-in', async () => {
+    await assertSucceeds(getDoc(doc(as('bob'), 'loginVerifications/bob')));
+    await assertFails(getDoc(doc(as('alice'), 'loginVerifications/bob')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'loginVerifications/bob')));
+  });
+
+  it('never lets a client mark its own sign-in as passed or read the PINs', async () => {
+    await assertFails(setDoc(doc(as('bob'), 'loginVerifications/bob'), { authTime: 2 }));
+    await assertFails(getDoc(doc(as('bob'), 'loginPins/bob')));
+    await assertFails(setDoc(doc(as('bob'), 'loginPins/bob'), { hash: 'y', authTime: 2, attempts: 0 }));
+  });
+});

@@ -663,6 +663,7 @@
 }
 
 .onboarding-tour { width: min(480px, 100%); padding: 34px; position: relative; border-radius: var(--radius-xl); background: var(--bg-card); border: 1px solid var(--border-primary); box-shadow: var(--shadow-xl); text-align: center; }
+.verify-email-modal .tour-next { justify-content: center; min-width: 120px; margin: 22px auto 0; }
 .tour-kicker { color: var(--primary-600); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .tour-icon { width: 64px; height: 64px; display: grid; place-items: center; margin: 20px auto 14px; border-radius: 20px; color: white; background: var(--gradient-primary); }
 .onboarding-tour h2 { margin-bottom: 8px; color: var(--text-primary); }
@@ -862,6 +863,7 @@
   }
   .explore-search {
     flex-direction: column;
+    align-items: stretch;
   }
   .user-filters {
     align-items: stretch;

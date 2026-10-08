@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Filter, Users as UsersIcon, Star, UserPlus, X, ArrowLeftRight, ArrowRight, Check, Loader2, Sparkles, Bookmark, EyeOff, Flag } from 'lucide-react';
+import { Search, Filter, Users as UsersIcon, Star, UserPlus, X, ArrowLeftRight, ArrowRight, Check, Loader2, MailCheck, Sparkles, Bookmark, EyeOff, Flag } from 'lucide-react';
 import { getSkillsCatalog, getAllUsers, getMatches, createMatch, submitReport } from '../lib/firestoreService';
 import { getSkillIcon } from '../lib/iconMap';
 import { getAiRecommendations, getCompatibleLearnSkills, getCompatibleTeachSkills, getMatchScore, userMatchesSearch } from '../lib/matchUtils';
@@ -16,7 +16,8 @@ export function ExplorePage() {
   const navigate = useNavigate();
   const { updateProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tourStep, setTourStep] = useState(searchParams.get('welcome') === '1' ? 0 : -1);
+  const [showVerifyEmail, setShowVerifyEmail] = useState(searchParams.get('verifyEmail') === '1');
+  const [tourStep, setTourStep] = useState(searchParams.get('welcome') === '1' && searchParams.get('verifyEmail') !== '1' ? 0 : -1);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'All' | SkillCategory>('All');
@@ -182,9 +183,18 @@ export function ExplorePage() {
     setSearchParams(nextParams, { replace: true });
   };
 
+  const closeVerifyEmail = () => {
+    setShowVerifyEmail(false);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('verifyEmail');
+    setSearchParams(nextParams, { replace: true });
+    if (nextParams.get('welcome') === '1') setTourStep(0);
+  };
+
   const skillDialogRef = useDialogAccessibility(Boolean(selectedSkill), closeSkillDetails);
   const matchDialogRef = useDialogAccessibility(Boolean(matchTarget), closeMatchModal);
   const tourDialogRef = useDialogAccessibility(tourStep >= 0, closeTour);
+  const verifyEmailDialogRef = useDialogAccessibility(showVerifyEmail, closeVerifyEmail);
 
   const sendMatchRequest = async () => {
     if (!user || !matchTarget || !selectedTeach || !selectedLearn) {
@@ -266,6 +276,28 @@ export function ExplorePage() {
       </div>
 
       <div className="explore-search animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <form
+          className="search-bar"
+          role="search"
+          onSubmit={event => {
+            event.preventDefault();
+            applySearch();
+          }}
+        >
+          <Search size={18} />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={event => {
+              setSearchInput(event.target.value);
+              if (!event.target.value.trim()) setSearchQuery('');
+            }}
+            placeholder={showUsers ? 'Search students by name, university or skill...' : 'Search skills...'}
+            aria-label={showUsers ? 'Search students' : 'Search skills'}
+            id="explore-search-input"
+          />
+          <button type="submit" className="search-run-btn">Search</button>
+        </form>
         <div className="search-actions">
           <button
             className="view-toggle"
@@ -636,6 +668,17 @@ export function ExplorePage() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showVerifyEmail && (
+        <div className="modal-overlay onboarding-tour-overlay">
+          <div ref={verifyEmailDialogRef} className="onboarding-tour verify-email-modal" role="dialog" aria-modal="true" aria-labelledby="verify-email-title" tabIndex={-1}>
+            <div className="tour-icon"><MailCheck aria-hidden="true" /></div>
+            <h2 id="verify-email-title">Verify your email</h2>
+            <p>Your account has been created. Please check <strong>{user?.email}</strong> for a verification link and follow the instructions to verify your email address. If you don’t see the message, check your spam folder or request another link from Student verification on your profile.</p>
+            <button type="button" className="tour-next" onClick={closeVerifyEmail}>Got it <ArrowRight size={17} /></button>
           </div>
         </div>
       )}

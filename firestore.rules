@@ -627,6 +627,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Written only by the server (Admin SDK) once the emailed login PIN is entered; the
+    // client compares authTime with its own sign-in to decide whether to ask for a PIN.
+    // loginPins (the hashed PINs) has no rule, so clients can never read it.
+    match /loginVerifications/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Any collection not explicitly listed above is denied by default.
     match /{document=**} {
       allow read, write: if false;

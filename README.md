@@ -9,6 +9,13 @@ npm install
 npm run dev
 ```
 
+Signing in also needs the EduSwap server (login PINs and group-call tokens) running
+in a second terminal; see [LiveKit configuration](#livekit-configuration):
+
+```bash
+npm run livekit:server
+```
+
 ## Firebase Storage CORS
 
 Browser uploads to Firebase Storage require the local development origins to be allowed by the bucket's CORS policy. With Google Cloud CLI installed and authenticated, apply the included policy with:
@@ -70,8 +77,7 @@ npm run migrate:public-profiles
 
 Run this migration before deploying the updated frontend and `firestore.rules`.
 The new client reads discovery profiles from `publicProfiles`, while the rules
-restrict `users` documents to their owner and admins. Deploy the updated
-callable functions as well so completed-session totals remain current.
+restrict `users` documents to their owner and admins.
 
 Deploy Firebase security rules after initializing Firestore and Storage:
 
@@ -102,28 +108,23 @@ npm run promote:owner -- stacymanth@gmail.com
 The account must sign out and sign in again after promotion so Firebase refreshes
 the custom claim.
 
-## Cloud Functions
+## Session credits
 
-Session completion (credit transfer) and cancellation run as callable Cloud
-Functions in `functions/`, because browsers must not write credit balances.
-The Firebase project must be on the Blaze plan to deploy functions.
-
-```bash
-npm --prefix functions install
-firebase deploy --only functions,firestore:rules
-```
-
-The credit amount per session comes from the admin setting
+The app runs on the free Spark plan without Cloud Functions. Completing a session
+moves credits from the learner to the teacher in a single Firestore transaction
+(`src/lib/firestore/credits.ts`), and `firestore.rules` checks every write: only
+the learner can complete, only after the start time, exactly the configured amount,
+once, and never below zero. The amount comes from the admin setting
 `settings/platform.creditsPerSession` (default 10), not from the session document.
 
-To test locally, run `npm --prefix functions run serve` and set
-`VITE_USE_FUNCTIONS_EMULATOR=true` in `.env.local`.
+The `functions/` folder is no longer used by the app.
 
 ## Notes
 
 - The app uses Firebase Firestore and Authentication.
 - Skills are now captured at signup and used for matching in Explore.
-# LiveKit configuration
+
+## LiveKit configuration
 
 EduSwap uses LiveKit for authenticated group calls. Copy `.env.example` to `.env.local`, then replace the LiveKit placeholders with values from your own LiveKit Cloud project:
 
@@ -134,7 +135,7 @@ LIVEKIT_URL=wss://your-project.livekit.cloud
 LIVEKIT_API_KEY=your-api-key
 LIVEKIT_API_SECRET=your-api-secret
 LIVEKIT_TOKEN_PORT=8787
-APP_ORIGIN=http://localhost:5173
+APP_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
 GOOGLE_APPLICATION_CREDENTIALS=C:/secure/path/firebase-service-account.json
 ```
 
@@ -146,3 +147,8 @@ npm run livekit:server
 ```
 
 The token endpoint verifies the Firebase login and confirms that the user belongs to the requested EduSwap group-call room before issuing a short-lived LiveKit token.
+
+The same server emails the 6-digit login PIN asked for at every sign-in. Set
+`SMTP_USER` and `SMTP_PASS` (a Gmail app password) in `.env.local`; while they are
+empty, the server prints each PIN in its terminal instead (local testing only). If
+the server is not running, students cannot finish signing in.

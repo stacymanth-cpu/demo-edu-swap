@@ -1,23 +1,31 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile as fbUpdateProfile,
+  type User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
 import type { User } from '../types';
 import { rememberEmail } from '../lib/rememberedLogin';
+import { isLoginVerified, sendLoginPin, trustNewAccount, verifyLoginPin } from '../lib/loginPin';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   authReady: boolean;
   sessionExpired: boolean;
+  /** Email the login PIN was sent to while the sign-in waits for it; null otherwise. */
+  pinEmail: string | null;
   /** remember: stay signed in for 30 days and prefill the email next time (default), or 8 hours. */
   login: (email: string, password: string, remember?: boolean) => Promise<string | null>;
+  /** Emails the login PIN (resend: a new PIN even if one was sent). Returns an error message or null. */
+  sendPin: (resend?: boolean) => Promise<string | null>;
+  /** Checks the login PIN and finishes signing in. Returns an error message or null. */
+  verifyPin: (pin: string) => Promise<string | null>;
   signup: (details: { firstName: string; lastName: string; studentNumber: string; email: string; mobileNumber?: string; password: string; university: string; skillsTeach: string[]; skillsLearn: string[] }) => Promise<string | null>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -48,6 +56,28 @@ async function updatePresence(uid: string, updates: Partial<User>) {
   }
 }
 
+/** Loads the signed-in student's profile (or a placeholder before it exists) and marks them online. */
+async function loadSignedInUser(firebaseUser: FirebaseUser): Promise<User> {
+  const profile = await getUser(firebaseUser.uid);
+  await updatePresence(firebaseUser.uid, { isOnline: true });
+  return profile || {
+    uid: firebaseUser.uid,
+    displayName: firebaseUser.displayName || '',
+    email: firebaseUser.email || '',
+    photoUrl: firebaseUser.photoURL || '',
+    university: '',
+    bio: '',
+    skillsTeach: [],
+    skillsLearn: [],
+    credits: 50,
+    rating: 0,
+    totalSessions: 0,
+    joinedAt: new Date(),
+    isOnline: true,
+    lastSeen: null,
+  };
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -55,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(() => localStorage.getItem(SESSION_EXPIRED_KEY) === 'true');
+  const [pinEmail, setPinEmail] = useState<string | null>(null);
+  // Creating an account signs in straight away; that sign-in is not asked for a PIN.
+  const signingUpRef = useRef(false);
 
   // Listen for auth state changes (persists login across refreshes)
   useEffect(() => {
@@ -72,33 +105,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const profile = await getUser(firebaseUser.uid);
-        if (profile) {
-          setUser(profile);
-          await updatePresence(firebaseUser.uid, { isOnline: true });
-        } else {
-          setUser({
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName || '',
-            email: firebaseUser.email || '',
-            photoUrl: firebaseUser.photoURL || '',
-            university: '',
-            bio: '',
-            skillsTeach: [],
-            skillsLearn: [],
-            credits: 50,
-            rating: 0,
-            totalSessions: 0,
-            joinedAt: new Date(),
-            isOnline: true,
-            lastSeen: null,
-          });
-          await updatePresence(firebaseUser.uid, { isOnline: true });
+        // Every sign-in must pass the emailed PIN before the app opens.
+        if (!signingUpRef.current && !(await isLoginVerified(firebaseUser).catch(() => false))) {
+          setUser(null);
+          setPinEmail(firebaseUser.email || '');
+          setAuthReady(true);
+          return;
         }
+
+        setPinEmail(null);
+        setUser(await loadSignedInUser(firebaseUser));
         setSessionExpired(false);
         localStorage.removeItem(SESSION_EXPIRED_KEY);
       } else {
         setUser(null);
+        setPinEmail(null);
         if (localStorage.getItem(SESSION_EXPIRED_KEY) === 'true') {
           setSessionExpired(true);
         }
@@ -153,9 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
           return 'This account is currently unavailable. Please contact EduSwap support.';
         }
-        setUser(profile);
-        await updatePresence(cred.user.uid, { isOnline: true });
       }
+      // The app opens once the emailed PIN is entered (see verifyPin).
+      setPinEmail(cred.user.email || email);
       setSessionExpired(false);
       localStorage.removeItem(SESSION_EXPIRED_KEY);
       setIsLoading(false);
@@ -168,16 +189,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const sendPin = useCallback(async (resend = false): Promise<string | null> => {
+    if (!auth.currentUser) return 'Please sign in again.';
+    try {
+      await sendLoginPin(auth.currentUser, resend);
+      return null;
+    } catch (err) {
+      return (err as Error).message;
+    }
+  }, []);
+
+  const verifyPin = useCallback(async (pin: string): Promise<string | null> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return 'Please sign in again.';
+    try {
+      await verifyLoginPin(firebaseUser, pin);
+      setUser(await loadSignedInUser(firebaseUser));
+      setPinEmail(null);
+      return null;
+    } catch (err) {
+      return (err as Error).message;
+    }
+  }, []);
+
   // Returns null on success, or an error message string on failure
   const signup = useCallback(async (details: { firstName: string; lastName: string; studentNumber: string; email: string; mobileNumber?: string; password: string; university: string; skillsTeach: string[]; skillsLearn: string[] }): Promise<string | null> => {
     setIsLoading(true);
+    signingUpRef.current = true;
     try {
       const name = `${details.firstName} ${details.lastName}`.trim();
       // Check before creating the sign-in account; the rules refuse the profile anyway.
       const universityDomains = await getVerifiedEmailDomains().catch(() => DEFAULT_VERIFIED_EMAIL_DOMAINS);
       if (!isUniversityEmail(details.email, universityDomains)) {
         setIsLoading(false);
-        return "Use your university email address to sign up. Personal emails such as Gmail or Outlook can't be used.";
+        return 'Wrong email. Use your university email address, not a personal email such as Gmail or Outlook.';
       }
       const cred = await createUserWithEmailAndPassword(auth, details.email, details.password);
 
@@ -207,6 +252,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastSeen: null,
       };
       await createUser(newUser);
+      // Without this, refreshing the page right after sign-up would ask for a login PIN.
+      trustNewAccount(cred.user).catch(error => console.warn('Could not record the new-account sign-in:', error));
       // A university email can verify the student instantly once they click the link.
       try {
         if (isUniversityEmail(details.email, await getVerifiedEmailDomains())) await sendUniversityVerificationEmail();
@@ -224,6 +271,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const msg = getAuthErrorMessage(err);
       setIsLoading(false);
       return msg; // error message
+    } finally {
+      signingUpRef.current = false;
     }
   }, []);
 
@@ -238,6 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSessionExpiry();
     await signOut(auth);
     setUser(null);
+    setPinEmail(null);
     setSessionExpired(false);
   }, [user]);
 
@@ -267,7 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, authReady, sessionExpired, login, signup, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, authReady, sessionExpired, pinEmail, login, sendPin, verifyPin, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
