@@ -3,7 +3,7 @@ import {
   ArrowRight, Sparkles, ArrowLeftRight, Coins, MessageCircle,
   Users, Star, Shield, BookOpen, Zap
 } from 'lucide-react';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo.webp';
 import './LandingPage.css';
 
 const features = [

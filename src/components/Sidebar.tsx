@@ -4,7 +4,7 @@ import { Home, Compass, Users, MessageCircle, User, LogOut, Coins, Sparkles, Vid
 import { useAuth } from '../context/AuthContext';
 import { subscribeToChatRooms, subscribeNotifications, markNotificationRead, subscribeSessions } from '../lib/firestoreService';
 import type { Notification, Session } from '../types';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo.webp';
 import './Sidebar.css';
 
 const navItems = [

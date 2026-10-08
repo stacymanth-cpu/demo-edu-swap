@@ -1,8 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCYJIoM4Inu2NqXx6l7tHIihNIuQf_Wxzw",
@@ -22,11 +20,5 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 });
 
 export const db = getFirestore(app);
-export const storage = getStorage(app);
-export const functions = getFunctions(app, 'us-central1');
-
-if (import.meta.env.VITE_USE_FUNCTIONS_EMULATOR === 'true') {
-  connectFunctionsEmulator(functions, 'localhost', 5001);
-}
 export default app;
 

@@ -6,7 +6,7 @@ import { auth } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { getRememberedEmail } from '../lib/rememberedLogin';
 import { validateEmail } from '../lib/validation';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo.webp';
 import './AuthPages.css';
 
 export function LoginPage() {

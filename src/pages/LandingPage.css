@@ -202,6 +202,7 @@
   margin-bottom: 20px;
   animation: fadeInUp 0.6s ease 0.1s both;
   letter-spacing: -1.5px;
+  color: #f8fafc;
 }
 
 .hero-title .gradient-word {
@@ -646,6 +647,15 @@
 
   .landing-nav-links {
     display: none;
+  }
+
+  .landing-nav-cta {
+    gap: 8px;
+  }
+
+  .landing-nav-cta a {
+    padding: 8px 12px;
+    white-space: nowrap;
   }
 
   .landing-hero {

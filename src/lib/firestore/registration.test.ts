@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../firebase', () => ({ db: {}, storage: {} }));
+vi.mock('../firebase', () => ({ default: {}, db: {} }));
 vi.mock('./users', () => ({ updateUser: vi.fn() }));
 
 const { REGISTRATION_CHUNK_CHARS, REGISTRATION_MAX_BYTES, REGISTRATION_MAX_CHUNKS, splitIntoChunks } = await import('./registration');

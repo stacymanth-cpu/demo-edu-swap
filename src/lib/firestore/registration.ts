@@ -6,8 +6,7 @@
 // is written last, so an admin never sees a partly uploaded document. Older uploads that
 // point at Storage (storagePath) still open.
 import { deleteDoc, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import app, { db } from '../firebase';
 import { updateUser } from './users';
 import { CHUNK_CHARS, readChunksAsBlob, readFileAsBase64, splitIntoChunks, temporaryObjectUrl, withTimeout, writeChunks } from './fileChunks';
 
@@ -65,9 +64,11 @@ export async function getAdminRegistrationDocumentUrl(uid: string): Promise<stri
     return temporaryObjectUrl(await readChunksAsBlob(parentRef, data.chunkCount, data.contentType || 'application/pdf'));
   }
 
-  // Documents uploaded before the switch to Firestore live in Firebase Storage.
+  // Documents uploaded before the switch to Firestore live in Firebase Storage. Its SDK is
+  // loaded only here so it stays out of the main bundle.
   if (typeof data.storagePath === 'string' && data.storagePath) {
-    return getDownloadURL(ref(storage, data.storagePath));
+    const { getDownloadURL, getStorage, ref } = await import('firebase/storage');
+    return getDownloadURL(ref(getStorage(app), data.storagePath));
   }
   return null;
 }
