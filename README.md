@@ -129,8 +129,6 @@ the learner can complete, only after the start time, exactly the configured amou
 once, and never below zero. The amount comes from the admin setting
 `settings/platform.creditsPerSession` (default 10), not from the session document.
 
-The `functions/` folder is no longer used by the app.
-
 ## Notes
 
 - The app uses Firebase Firestore and Authentication.
