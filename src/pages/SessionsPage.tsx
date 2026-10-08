@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Video, Check, XCircle, X, Loader2, RefreshCw, ExternalLink, Download, Star, Bell, Globe2 } from 'lucide-react';
-import { getSessions, subscribeSessions, cancelSession, updateSession, completeSessionWithCredits, createComment, getChatRooms, getComments } from '../lib/firestoreService';
+import { getSessions, subscribeSessions, cancelSession, updateSession, completeSessionWithCredits, createComment, getChatRooms, getReviewsBy } from '../lib/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -38,7 +38,7 @@ export function SessionsPage() {
     if (!user) return;
     setLoadError('');
     setLoading(true);
-    Promise.all([getSessions(user.uid), getChatRooms(user.uid), getComments()])
+    Promise.all([getSessions(user.uid), getChatRooms(user.uid), getReviewsBy(user.uid)])
       .then(([sessions, rooms, reviews]) => {
         setSessionList(sessions);
         const roomLookup: Record<string, string> = {};

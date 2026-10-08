@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Star, UserPlus, CalendarPlus, Loader2, Clock, Flag, Ban, BadgeCheck, Bookmark, BookOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getComments, getUser, getMatches, createMatch, submitReport, blockUser } from '../lib/firestoreService';
+import { getReviewsAbout, getUser, getMatches, createMatch, submitReport, blockUser } from '../lib/firestoreService';
 import { getCompatibleLearnSkills, getCompatibleTeachSkills } from '../lib/matchUtils';
 import { isValidTeamsLink } from '../lib/meetingLinks';
 import type { Comment, User } from '../types';
@@ -34,7 +34,7 @@ export function TutorProfilePage() {
 
   useEffect(() => {
     if (!uid) return;
-    Promise.all([getUser(uid), getComments()])
+    Promise.all([getUser(uid), getReviewsAbout([uid])])
       .then(([profileUser, commentList]) => {
         setTutor(profileUser);
         setComments(commentList);

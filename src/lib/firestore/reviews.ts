@@ -1,13 +1,12 @@
 // Session reviews.
-import { collection, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc, query, where, onSnapshot, Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc, query, where, onSnapshot, Timestamp, type QueryDocumentSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Session, Comment } from '../../types';
 import { writeAuditLog } from './admin';
 import { toDate } from './shared';
 
-export async function getComments(): Promise<Comment[]> {
-  const snap = await getDocs(collection(db, 'comments'));
-  return snap.docs.filter(d => d.data().moderationStatus !== 'removed').map(d => {
+function toComments(docs: QueryDocumentSnapshot[]): Comment[] {
+  return docs.filter(d => d.data().moderationStatus !== 'removed').map(d => {
     const data = d.data();
     return {
       ...data,
@@ -15,6 +14,31 @@ export async function getComments(): Promise<Comment[]> {
       timestamp: toDate(data.timestamp),
     } as Comment;
   });
+}
+
+/** Every review in the app. Only admin moderation needs this; pages use the targeted reads below. */
+export async function getComments(): Promise<Comment[]> {
+  const snap = await getDocs(collection(db, 'comments'));
+  return toComments(snap.docs);
+}
+
+// Firestore accepts at most 30 values in an `in` filter.
+const IN_FILTER_LIMIT = 30;
+
+/** Reviews written about any of these students. */
+export async function getReviewsAbout(userIds: string[]): Promise<Comment[]> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += IN_FILTER_LIMIT) batches.push(ids.slice(i, i + IN_FILTER_LIMIT));
+  const snaps = await Promise.all(batches.map(batch =>
+    getDocs(query(collection(db, 'comments'), where('targetUserId', 'in', batch)))));
+  return snaps.flatMap(snap => toComments(snap.docs));
+}
+
+/** Reviews this student has written. */
+export async function getReviewsBy(userId: string): Promise<Comment[]> {
+  const snap = await getDocs(query(collection(db, 'comments'), where('userId', '==', userId)));
+  return toComments(snap.docs);
 }
 
 /** Subscribe to reviews received by a specific student. */

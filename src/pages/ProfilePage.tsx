@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import { Star, MapPin, BookOpen, Coins, Calendar, TrendingUp, ArrowUp, ArrowDown, Loader2, Pencil, X, Plus, Save, Camera, BadgeCheck, CircleCheck, Circle, ChevronDown, ShieldAlert, ShieldCheck, UserRoundCheck, Video, Award, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { createGroupCallRoom, getSessions, getTransactions, getComments, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
+import { createGroupCallRoom, getSessions, getTransactions, getReviewsAbout, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
 import { IntroVideoRecorder } from '../components/introVideo/IntroVideoRecorder';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { UniversityEmailVerification } from '../components/UniversityEmailVerification';
@@ -102,19 +102,25 @@ export function ProfilePage() {
     if (!user) return;
     setLoadError('');
     setLoading(true);
+    // Reviews are needed only for this student and their accepted partners, so they are
+    // loaded once the matches are known instead of downloading every review in the app.
+    const matchesWithReviews = getMatches(user.uid).then(async matches => {
+      const accepted = matches.filter(match => match.status === 'accepted');
+      const partnerIds = accepted.map(match => (match.user1Id === user.uid ? match.user2Id : match.user1Id));
+      return { accepted, reviews: await getReviewsAbout([user.uid, ...partnerIds]) };
+    });
     Promise.all([
       getSessions(user.uid),
       getTransactions(user.uid),
-      getComments(),
       getSkillsCatalog(),
-      getMatches(user.uid),
-    ]).then(([sess, txns, cmts, skills, matches]) => {
+      matchesWithReviews,
+    ]).then(([sess, txns, skills, { accepted, reviews }]) => {
       setSessions(sess);
       setTransactions(txns);
-      setComments(cmts);
-      setProfileReviews(cmts.filter(comment => comment.targetUserId === user.uid));
+      setComments(reviews);
+      setProfileReviews(reviews.filter(comment => comment.targetUserId === user.uid));
       setAllSkillsInfo(skills);
-      setLinkedStudents(matches.filter(match => match.status === 'accepted'));
+      setLinkedStudents(accepted);
       setLoading(false);
     }).catch(err => {
       console.error('Failed to load profile data:', err);

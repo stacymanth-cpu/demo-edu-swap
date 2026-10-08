@@ -56,10 +56,14 @@ async function updatePresence(uid: string, updates: Partial<User>) {
   }
 }
 
-/** Loads the signed-in student's profile (or a placeholder before it exists) and marks them online. */
-async function loadSignedInUser(firebaseUser: FirebaseUser): Promise<User> {
+/**
+ * Loads the signed-in student's profile (or a placeholder before it exists) and marks them online.
+ * Sign-up passes markOnline false: the profile it is still saving is created online, and until
+ * the save reaches the server the presence update would fail with "User profile not found".
+ */
+async function loadSignedInUser(firebaseUser: FirebaseUser, markOnline = true): Promise<User> {
   const profile = await getUser(firebaseUser.uid);
-  await updatePresence(firebaseUser.uid, { isOnline: true });
+  if (profile && markOnline) await updatePresence(firebaseUser.uid, { isOnline: true });
   return profile || {
     uid: firebaseUser.uid,
     displayName: firebaseUser.displayName || '',
@@ -114,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setPinEmail(null);
-        setUser(await loadSignedInUser(firebaseUser));
+        setUser(await loadSignedInUser(firebaseUser, !signingUpRef.current));
         setSessionExpired(false);
         localStorage.removeItem(SESSION_EXPIRED_KEY);
       } else {

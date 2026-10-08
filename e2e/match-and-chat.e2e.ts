@@ -35,8 +35,8 @@ test.describe.serial('Explore, match and chat', () => {
       await signIn(bonganiPage, bongani);
       await bonganiPage.goto('/matches');
       await bonganiPage.locator('[id^="accept-"]').first().click();
-      await expect(bonganiPage.getByRole('button', { name: 'Accepted 1' })).toBeVisible();
-      await bonganiPage.getByRole('button', { name: 'Accepted 1' }).click();
+      // Accepting switches to the Accepted tab, where the new partner can be messaged.
+      await expect(bonganiPage.getByRole('button', { name: 'Accepted 1' })).toHaveClass(/active/);
       await bonganiPage.getByRole('button', { name: 'Message' }).first().click();
       await expect(bonganiPage).toHaveURL(/\/chat/);
 

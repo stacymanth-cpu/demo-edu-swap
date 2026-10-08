@@ -82,6 +82,8 @@ export function MatchesPage() {
   const handleAccept = async (matchId: string) => {
     await updateMatchStatus(matchId, 'accepted');
     setMatchList(prev => prev.map(m => m.id === matchId ? { ...m, status: 'accepted' as const } : m));
+    // Show the new partner, with Message and Schedule Session, instead of an emptier Pending list.
+    setActiveTab('accepted');
   };
 
   const handleDecline = async (matchId: string) => {
