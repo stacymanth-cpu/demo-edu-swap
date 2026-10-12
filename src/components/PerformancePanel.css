@@ -18,6 +18,32 @@
 .performance-heading h2 { margin: 0 0 4px; }
 .performance-heading p { margin: 0; color: var(--text-secondary); font-size: 14px; }
 
+.performance-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.performance-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--primary-600);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.performance-download:hover:not(:disabled) { background: var(--bg-tertiary); }
+.performance-download:disabled { opacity: 0.7; cursor: progress; }
+.performance-download-error { margin: -8px 0 14px; color: var(--danger-500); font-size: 13px; }
+
 .performance-last-active {
   font-size: 12px;
   color: var(--text-tertiary);

@@ -355,7 +355,7 @@ export function TutorProfilePage() {
         </section>
       </div>
 
-      <PerformancePanel uid={tutor.uid} ownProfile={user?.uid === tutor.uid} />
+      <PerformancePanel uid={tutor.uid} person={{ displayName: tutor.displayName, university: tutor.university }} ownProfile={user?.uid === tutor.uid} />
 
       <section className="review-section">
         <div className="reputation-heading"><div><h2>Reviews and reputation</h2><p>Feedback from completed EduSwap sessions.</p></div>{verifiedReviewCount > 0 && <span className="verified-review-total"><BadgeCheck size={15} /> {verifiedReviewCount} verified</span>}</div>

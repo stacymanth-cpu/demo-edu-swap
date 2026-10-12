@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Activity, BookOpen, CheckCircle2, GraduationCap, Handshake, Star, TrendingUp, Users } from 'lucide-react';
+import { Activity, BookOpen, CheckCircle2, Download, GraduationCap, Handshake, Loader2, Star, TrendingUp, Users } from 'lucide-react';
 import { subscribeProfileStats } from '../lib/firestoreService';
+import { downloadProgressReport, type ReportPerson } from '../lib/progressReport';
 import type { ProfileStats } from '../types';
 import './PerformancePanel.css';
 
@@ -22,12 +23,27 @@ const ACTIVITY_TEXT = {
  * monthly sessions and recent activity. Computed by the EduSwap server after every match,
  * session and review; partners and reviewers are never named. Every signed-in student can see it.
  */
-export function PerformancePanel({ uid, ownProfile = false, className = '' }: { uid: string; ownProfile?: boolean; className?: string }) {
+export function PerformancePanel({ uid, person, ownProfile = false, className = '' }: { uid: string; person: ReportPerson; ownProfile?: boolean; className?: string }) {
   const [stats, setStats] = useState<ProfileStats | null | undefined>(undefined);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => subscribeProfileStats(uid, setStats), [uid]);
 
   if (stats === undefined) return null;
+
+  const download = async () => {
+    setDownloading(true);
+    setDownloadError('');
+    try {
+      await downloadProgressReport(person, stats);
+    } catch (error) {
+      console.error('Could not create the progress report:', error);
+      setDownloadError('The report could not be downloaded. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const tiles = [
     { icon: Users, label: 'Partners matched', value: String(stats?.partners ?? 0), detail: stats?.matchAcceptanceRate === null || !stats ? 'No requests answered yet' : `${percent(stats.matchAcceptanceRate)} of requests accepted` },
@@ -51,8 +67,15 @@ export function PerformancePanel({ uid, ownProfile = false, className = '' }: { 
           <h2 id="performance-title">Progress report</h2>
           <p>{ownProfile ? 'Your report as other students see it. It updates automatically after every match, session and review.' : 'Updated automatically after every match, session and review.'}</p>
         </div>
-        {stats?.lastActiveAt && <span className="performance-last-active">Last active {formatDistanceToNow(new Date(stats.lastActiveAt), { addSuffix: true })}</span>}
+        <div className="performance-heading-actions">
+          {stats?.lastActiveAt && <span className="performance-last-active">Last active {formatDistanceToNow(new Date(stats.lastActiveAt), { addSuffix: true })}</span>}
+          <button type="button" className="performance-download" id="btn-download-report" onClick={() => void download()} disabled={downloading}>
+            {downloading ? <Loader2 size={15} className="spinner" aria-hidden="true" /> : <Download size={15} aria-hidden="true" />}
+            {downloading ? 'Preparing…' : 'Download report'}
+          </button>
+        </div>
       </div>
+      {downloadError && <p className="performance-download-error" role="alert">{downloadError}</p>}
 
       <div className="performance-progress">
         <span className="performance-tile-icon"><TrendingUp size={16} aria-hidden="true" /></span>

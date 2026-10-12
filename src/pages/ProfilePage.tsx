@@ -623,7 +623,7 @@ export function ProfilePage() {
           )}
         </section>
 
-        <PerformancePanel uid={user.uid} ownProfile className="profile-section profile-section-wide" />
+        <PerformancePanel uid={user.uid} person={{ displayName: user.displayName, university: user.university }} ownProfile className="profile-section profile-section-wide" />
 
         {/* Credit History */}
         <section className="profile-section profile-section-wide profile-activity-section animate-fade-in-up" style={{ animationDelay: '0.2s' }}>

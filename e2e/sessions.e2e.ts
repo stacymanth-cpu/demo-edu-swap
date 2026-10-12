@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { emulatorAdmin } from './admin';
 import { CREDITS_PER_SESSION, PAST_SESSION_ID, STARTING_CREDITS, STUDENTS } from './fixtures';
@@ -54,5 +55,14 @@ test.describe.serial('Completing a session', () => {
     await expect(panel.getByText('Taught a Statistics session')).toBeVisible();
     // Partners are never named in the public activity.
     await expect(panel.getByText('Lerato')).toHaveCount(0);
+
+    // Another student can download Thabo's report as a PDF.
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      panel.getByRole('button', { name: 'Download report' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('Thabo-Khumalo-progress-report.pdf');
+    await download.saveAs('e2e/.output/progress-report-sample.pdf');
+    expect(readFileSync('e2e/.output/progress-report-sample.pdf').subarray(0, 5).toString()).toBe('%PDF-');
   });
 });

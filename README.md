@@ -186,6 +186,8 @@ EduSwap is designed to run without day-to-day admin work:
   activity. Matches and sessions are private to their participants, so the server computes
   each student's summary into `publicStats/{uid}`, which any signed-in student can read
   and nobody else can write. Partners are never named. Set `PROFILE_STATS=off` to disable it.
+  **Download report** on the panel saves the same report as a PDF (`src/lib/progressReport.ts`),
+  for any student who can see the profile.
 - **Suspension** stays a manual admin action. A student suspended while signed in is signed out
   immediately and told why.
 
