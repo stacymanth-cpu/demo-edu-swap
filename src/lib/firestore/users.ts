@@ -1,5 +1,5 @@
 // User profiles and admin account management.
-import { collection, doc, getDoc, getDocs, onSnapshot, Timestamp, writeBatch, runTransaction, type DocumentData, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, Timestamp, writeBatch, runTransaction, type DocumentData, type Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import type { User } from '../../types';
 import { writeAuditLog } from './admin';
@@ -38,6 +38,20 @@ export function subscribeUser(uid: string, callback: (user: User | null) => void
     }
     callback(mapUserData(snapshot.data(), snapshot.id, true));
   });
+}
+
+/**
+ * Claims a student number for this account. Returns false when another account already holds
+ * it (the rules refuse a second claim). Must succeed before createUser.
+ */
+export async function claimStudentNumber(uid: string, studentNumber: string): Promise<boolean> {
+  try {
+    await setDoc(doc(db, 'studentNumbers', studentNumber), { uid });
+    return true;
+  } catch (error) {
+    if ((error as { code?: string })?.code === 'permission-denied') return false;
+    throw error;
+  }
 }
 
 export async function createUser(user: User): Promise<void> {

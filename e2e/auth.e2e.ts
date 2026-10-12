@@ -103,6 +103,14 @@ test.describe('Sign up', () => {
     await expect(page.getByRole('button', { name: 'Send verification link' })).toBeVisible();
   });
 
+  test('a second account with the same student number is refused', async ({ page }) => {
+    // Runs after the test above, which registered student number 202412345.
+    await page.goto('/signup');
+    await fillSignUp(page, 'naledi.again@ump.ac.za');
+    await expect(page.getByText(/student number already exists/)).toBeVisible();
+    await expect(page).toHaveURL(/\/signup$/);
+  });
+
   test('verified students are not asked to verify', async ({ page }) => {
     await signIn(page, STUDENTS.ayanda);
     await expect(page.locator('#btn-verify-account')).toHaveCount(0);

@@ -212,3 +212,29 @@ minute; an uptime monitor calling `/healthz` every 10 minutes keeps it awake.
 If PIN emails never arrive and the Render logs show a connection timeout to Gmail, the
 host is blocking outgoing SMTP: create a free Brevo account, verify your sender address,
 and set `BREVO_API_KEY` and `MAIL_FROM` instead.
+
+To keep the free server awake, set the repository variable `PIN_SERVER_URL` (GitHub >
+Settings > Secrets and variables > Actions > Variables) to the server's address. The
+`Keep the EduSwap server awake` workflow then calls `/healthz` every 10 minutes. GitHub
+pauses scheduled workflows after 60 days without commits; re-enable it from the Actions tab.
+
+## Hosting the website (free)
+
+The website is hosted on Firebase Hosting (free Spark plan) at
+`https://eduswap-5e9ed.web.app`. Set the server's `APP_ORIGIN` to that address, then build
+with the server's token address and deploy the site with the database rules:
+
+```powershell
+$env:VITE_LIVEKIT_TOKEN_ENDPOINT = 'https://<service>.onrender.com/api/livekit/token'
+npm run build
+firebase deploy --only hosting,firestore:rules,storage
+```
+
+## One account per student
+
+Each student number can belong to one account. Sign-up claims the number in
+`studentNumbers/{number}` before creating the profile, and `firestore.rules` refuses a
+second claim and any profile whose number is not claimed by that account. Only admins can
+read the list. Accounts created before this rule are recorded with
+`npm run register:student-numbers -- --apply` (without `--apply` it only reports, including
+any number shared by several accounts, which an admin must resolve).

@@ -196,6 +196,9 @@ service cloud.firestore {
       allow create: if isUser(userId)
         && signInEmailDomain() in approvedEmailDomains()
         && request.resource.data.uid == userId
+        // One account per student number: the number must be registered to this account.
+        && request.resource.data.studentNumber is string
+        && get(/databases/$(database)/documents/studentNumbers/$(request.resource.data.studentNumber)).data.uid == userId
         && request.resource.data.credits == 50
         && request.resource.data.get('isAdmin', false) != true
         && request.resource.data.get('studentVerified', false) == false
@@ -220,6 +223,17 @@ service cloud.firestore {
         || ratingUpdate(userId)
         || universityEmailSelfVerification(userId);
       allow delete: if isAdmin();
+    }
+
+    // Each student number belongs to one account. A new student claims their number once,
+    // before creating their profile; a number someone else holds cannot be claimed again.
+    // Only admins can read the list, so nobody can look up who holds a number.
+    match /studentNumbers/{studentNumber} {
+      allow read, update, delete: if isAdmin();
+      allow create: if signedIn()
+        && studentNumber.matches('^[0-9]{9}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
     }
 
     // Running totals behind each student's average rating. A reviewer adds exactly

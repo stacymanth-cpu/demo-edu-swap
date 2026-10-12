@@ -8,7 +8,7 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
+import { getUser, claimStudentNumber, createUser, subscribeUser, updateUser as fsUpdateUser, DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
 import type { User } from '../types';
 import { rememberEmail } from '../lib/rememberedLogin';
 import { clearAccountUnavailable, markAccountUnavailable } from '../lib/accountNotice';
@@ -100,6 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const expiresAt = Number(localStorage.getItem(SESSION_KEY) || '0');
 
       if (firebaseUser) {
+        // Sign-up sets the user itself once the profile is saved; until then, stay on the form
+        // so a refused sign-up (such as a student number already in use) can show its message.
+        if (signingUpRef.current) {
+          setAuthReady(true);
+          return;
+        }
+
         if (expiresAt && Date.now() > expiresAt) {
           localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
           setSessionExpired(true);
@@ -111,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Every sign-in must pass the emailed PIN before the app opens.
-        if (!signingUpRef.current && !(await isLoginVerified(firebaseUser).catch(() => false))) {
+        if (!(await isLoginVerified(firebaseUser).catch(() => false))) {
           setUser(null);
           setPinEmail(firebaseUser.email || '');
           setAuthReady(true);
@@ -119,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setPinEmail(null);
-        setUser(await loadSignedInUser(firebaseUser, !signingUpRef.current));
+        setUser(await loadSignedInUser(firebaseUser));
         setSessionExpired(false);
         localStorage.removeItem(SESSION_EXPIRED_KEY);
       } else {
@@ -236,6 +243,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return 'Wrong email. Use your university email address, not a personal email such as Gmail or Outlook.';
       }
       const cred = await createUserWithEmailAndPassword(auth, details.email, details.password);
+
+      // One account per student: if the number is already registered, undo the new sign-in.
+      if (!(await claimStudentNumber(cred.user.uid, details.studentNumber))) {
+        await cred.user.delete().catch(error => console.warn('Could not remove the unused sign-in account:', error));
+        setIsLoading(false);
+        return 'An account with this student number already exists. Sign in to it instead, or contact EduSwap support if it is not yours.';
+      }
 
       await fbUpdateProfile(cred.user, { displayName: name });
 

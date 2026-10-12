@@ -265,21 +265,59 @@ describe('platform settings', () => {
 });
 
 describe('sign-up with a university email only', () => {
-  const newProfile = (uid: string) => ({ uid, displayName: 'New Student', credits: 50, studentVerified: false });
+  const numbers: Record<string, string> = { newbie: '202400011', gmailer: '202400012', outlooker: '202400013', witsie: '202400014' };
+  const newProfile = (uid: string) => ({ uid, displayName: 'New Student', credits: 50, studentVerified: false, studentNumber: numbers[uid] });
   const signedUpAs = (uid: string, email: string) => testEnv.authenticatedContext(uid, { email }).firestore();
+  const signUp = async (uid: string, email: string) => {
+    const db = signedUpAs(uid, email);
+    await setDoc(doc(db, `studentNumbers/${numbers[uid]}`), { uid });
+    return setDoc(doc(db, `users/${uid}`), newProfile(uid));
+  };
 
   it('creates a profile for a university email', async () => {
-    await assertSucceeds(setDoc(doc(signedUpAs('newbie', 'newbie@UMP.ac.za'), 'users/newbie'), newProfile('newbie')));
+    await assertSucceeds(signUp('newbie', 'newbie@UMP.ac.za'));
   });
 
   it('refuses personal email addresses', async () => {
-    await assertFails(setDoc(doc(signedUpAs('gmailer', 'someone@gmail.com'), 'users/gmailer'), newProfile('gmailer')));
-    await assertFails(setDoc(doc(signedUpAs('outlooker', 'someone@outlook.com'), 'users/outlooker'), newProfile('outlooker')));
+    await assertFails(signUp('gmailer', 'someone@gmail.com'));
+    await assertFails(signUp('outlooker', 'someone@outlook.com'));
   });
 
   it('follows the admin list of university domains', async () => {
     await testEnv.withSecurityRulesDisabled(async context => updateDoc(doc(context.firestore(), 'settings/platform'), { verifiedEmailDomains: ['ump.ac.za', 'wits.ac.za'] }));
-    await assertSucceeds(setDoc(doc(signedUpAs('witsie', 'witsie@wits.ac.za'), 'users/witsie'), newProfile('witsie')));
+    await assertSucceeds(signUp('witsie', 'witsie@wits.ac.za'));
+  });
+});
+
+describe('one account per student number', () => {
+  const signedUpAs = (uid: string) => testEnv.authenticatedContext(uid, { email: `${uid}@ump.ac.za` }).firestore();
+  const profile = (uid: string, studentNumber: string) => ({ uid, displayName: 'New Student', credits: 50, studentVerified: false, studentNumber });
+
+  it('lets a new student claim their number and create their profile', async () => {
+    await assertSucceeds(setDoc(doc(signedUpAs('first'), 'studentNumbers/202499001'), { uid: 'first' }));
+    await assertSucceeds(setDoc(doc(signedUpAs('first'), 'users/first'), profile('first', '202499001')));
+  });
+
+  it('refuses a second account with the same student number', async () => {
+    await assertSucceeds(setDoc(doc(signedUpAs('first'), 'studentNumbers/202499002'), { uid: 'first' }));
+    await assertFails(setDoc(doc(signedUpAs('second'), 'studentNumbers/202499002'), { uid: 'second' }));
+    await assertFails(setDoc(doc(signedUpAs('second'), 'users/second'), profile('second', '202499002')));
+  });
+
+  it('refuses a profile whose number was not claimed', async () => {
+    await assertFails(setDoc(doc(signedUpAs('sneaky'), 'users/sneaky'), profile('sneaky', '202499003')));
+  });
+
+  it('refuses claiming for someone else, extra fields, or a number that is not 9 digits', async () => {
+    await assertFails(setDoc(doc(signedUpAs('first'), 'studentNumbers/202499004'), { uid: 'other' }));
+    await assertFails(setDoc(doc(signedUpAs('first'), 'studentNumbers/202499005'), { uid: 'first', note: 'x' }));
+    await assertFails(setDoc(doc(signedUpAs('first'), 'studentNumbers/12345'), { uid: 'first' }));
+  });
+
+  it('keeps the list private to admins', async () => {
+    await assertSucceeds(setDoc(doc(signedUpAs('first'), 'studentNumbers/202499006'), { uid: 'first' }));
+    await assertFails(getDoc(doc(signedUpAs('first'), 'studentNumbers/202499006')));
+    await assertFails(getDoc(doc(signedUpAs('second'), 'studentNumbers/202499006')));
   });
 });
 

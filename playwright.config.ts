@@ -9,6 +9,8 @@ const PIN_SERVER_PORT = 8799;
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.e2e.ts',
+  // Test output (and anything generated into it) is never part of the suite.
+  testIgnore: '**/.output/**',
   globalSetup: './e2e/global-setup.ts',
   // The tests share one emulator database, so they run one at a time.
   workers: 1,

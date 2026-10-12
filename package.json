@@ -17,6 +17,7 @@
     "migrate:public-profiles": "npx tsx src/scripts/migratePublicProfiles.ts",
     "migrate:registration-documents": "npx tsx src/scripts/migrateRegistrationDocuments.ts",
     "promote:owner": "npx tsx src/scripts/promoteOwner.ts",
+    "register:student-numbers": "npx tsx src/scripts/registerStudentNumbers.ts",
     "preview": "vite preview",
     "livekit:server": "tsx --env-file=.env.local server/livekitTokenServer.ts"
   },

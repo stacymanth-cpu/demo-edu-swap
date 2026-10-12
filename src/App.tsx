@@ -49,7 +49,8 @@ function AppLayout() {
         {awaitingPin ? <LoginPinPage /> : (
         <Routes>
           <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />
-          <Route path="/signup" element={<AuthRedirect><SignUpPage /></AuthRedirect>} />
+          {/* A new account is signed in when sign-up finishes; send it to its Explore welcome. */}
+          <Route path="/signup" element={<AuthRedirect to="/explore?welcome=1&verifyEmail=1"><SignUpPage /></AuthRedirect>} />
           <Route path="/admin/login" element={<AuthRedirect><AdminLoginPage /></AuthRedirect>} />
           <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
           <Route path="/" element={<RootRoute />} />
@@ -79,9 +80,9 @@ function RootRoute() {
   return <LandingPage />;
 }
 
-function AuthRedirect({ children }: { children: React.ReactNode }) {
+function AuthRedirect({ children, to = '/' }: { children: React.ReactNode; to?: string }) {
   const { user } = useAuth();
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={to} replace />;
   return <>{children}</>;
 }
 
