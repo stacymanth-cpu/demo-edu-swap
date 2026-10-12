@@ -133,6 +133,12 @@ export async function adminUpdateUserStatus(adminId: string, userId: string, acc
   await writeAuditLog({ adminId, action: 'user_status_updated', targetId: userId, details: JSON.stringify(updates) });
 }
 
+/** Show a student hidden by automatic moderation in Explore again (or hide one by hand). */
+export async function adminSetHiddenFromDiscovery(adminId: string, userId: string, hidden: boolean): Promise<void> {
+  await updateUser(userId, { hiddenFromDiscovery: hidden });
+  await writeAuditLog({ adminId, action: hidden ? 'profile_hidden' : 'profile_shown', targetId: userId, details: hidden ? 'Hidden from Explore by an admin' : 'Shown in Explore again by an admin' });
+}
+
 export async function adminReviewStudentRegistration(adminId: string, userId: string, status: User['registrationVerificationStatus']): Promise<void> {
   await updateUser(userId, {
     registrationVerificationStatus: status,

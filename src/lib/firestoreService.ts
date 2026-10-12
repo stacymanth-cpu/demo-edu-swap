@@ -12,6 +12,7 @@ export * from './firestore/chat';
 export * from './firestore/catalog';
 export * from './firestore/credits';
 export * from './firestore/reviews';
+export * from './firestore/stats';
 export * from './firestore/media';
 export * from './firestore/introVideos';
 export * from './firestore/emailVerification';

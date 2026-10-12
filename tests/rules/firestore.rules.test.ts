@@ -391,6 +391,51 @@ describe('trusted-only data', () => {
   });
 });
 
+describe('students hidden after reports', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'users/carol'), { uid: 'carol', hiddenFromDiscovery: true });
+      await setDoc(doc(context.firestore(), 'publicProfiles/carol'), { uid: 'carol', hiddenFromDiscovery: true });
+    });
+  });
+
+  it('keeps the student usable: they can still edit their own profile', async () => {
+    await assertSucceeds(updateDoc(doc(as('carol'), 'users/carol'), { bio: 'Still here' }));
+    await assertSucceeds(setDoc(doc(as('carol'), 'publicProfiles/carol'), { uid: 'carol', hiddenFromDiscovery: true }));
+  });
+
+  it('blocks the student from un-hiding themselves, privately or publicly', async () => {
+    await assertFails(updateDoc(doc(as('carol'), 'users/carol'), { hiddenFromDiscovery: false }));
+    await assertFails(setDoc(doc(as('carol'), 'publicProfiles/carol'), { uid: 'carol' }));
+    await assertFails(setDoc(doc(as('carol'), 'publicProfiles/carol'), { uid: 'carol', hiddenFromDiscovery: false }));
+  });
+
+  it('blocks other students from hiding or showing anyone', async () => {
+    await assertFails(updateDoc(doc(as('bob'), 'users/carol'), { hiddenFromDiscovery: false }));
+    await assertFails(updateDoc(doc(as('bob'), 'users/alice'), { hiddenFromDiscovery: true }));
+    await assertFails(updateDoc(doc(as('alice'), 'users/alice'), { hiddenFromDiscovery: true }));
+  });
+});
+
+describe('public activity statistics', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'publicStats/alice'), { partners: 2, sessionsCompleted: 5 });
+    });
+  });
+
+  it('lets signed-in students read anyone\'s statistics, but not visitors', async () => {
+    await assertSucceeds(getDoc(doc(as('bob'), 'publicStats/alice')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'publicStats/alice')));
+  });
+
+  it('never lets a student write statistics, including their own', async () => {
+    await assertFails(setDoc(doc(as('alice'), 'publicStats/alice'), { partners: 99, sessionsCompleted: 500 }));
+    await assertFails(updateDoc(doc(as('alice'), 'publicStats/alice'), { sessionsCompleted: 500 }));
+    await assertFails(setDoc(doc(as('bob'), 'publicStats/bob'), { partners: 1 }));
+  });
+});
+
 describe('login PIN', () => {
   beforeEach(async () => {
     await testEnv.withSecurityRulesDisabled(async context => {

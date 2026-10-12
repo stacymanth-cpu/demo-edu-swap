@@ -5,6 +5,8 @@ import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { AccessToken } from 'livekit-server-sdk';
 import nodemailer from 'nodemailer';
+import { startAutoModeration } from './autoModeration';
+import { startProfileStats } from './profileStats';
 
 // Hosts such as Render assign the port through PORT.
 const port = Number(process.env.PORT || process.env.LIVEKIT_TOKEN_PORT || 8787);
@@ -247,3 +249,8 @@ const server = createServer(async (request, response) => {
 server.listen(port, () => {
   console.log(`EduSwap server (group calls + login PINs) listening on http://localhost:${port}`);
 });
+
+// Hides students reported by enough different students. AUTO_MODERATION=off disables it.
+if (process.env.AUTO_MODERATION !== 'off') startAutoModeration();
+// Keeps the public activity and performance summary on each profile current. PROFILE_STATS=off disables it.
+if (process.env.PROFILE_STATS !== 'off') startProfileStats();

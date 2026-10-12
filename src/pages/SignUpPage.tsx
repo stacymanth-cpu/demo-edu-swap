@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, Circle, Coins, Eye, EyeOff, Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { skillsCatalog, universities } from '../data/catalog';
-import { getPasswordRequirements, validateEmail, validatePassword } from '../lib/validation';
+import { getPasswordRequirements, normalizeMobileNumber, validateEmail, validateMobileNumber, validatePassword } from '../lib/validation';
 import { DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail } from '../lib/firestoreService';
 import logoImg from '../assets/logo.webp';
 import './AuthPages.css';
@@ -41,7 +41,7 @@ export function SignUpPage() {
     else if (!/^\d{9}$/.test(form.studentNumber.trim())) next.studentNumber = 'Student number must be exactly 9 digits.';
     if (!form.university) next.university = 'Select your university.';
     if (emailError(form.email)) next.email = emailError(form.email);
-    if (form.mobileNumber.trim() && !/^\+?[0-9\s()-]{7,20}$/.test(form.mobileNumber.trim())) next.mobileNumber = 'Enter a valid mobile number.';
+    if (form.mobileNumber && !validateMobileNumber(form.mobileNumber)) next.mobileNumber = 'Mobile number must be exactly 10 digits.';
     const passwordCheck = validatePassword(form.password);
     if (!passwordCheck.valid) next.password = passwordCheck.message || 'Enter a valid password.';
     if (form.password !== form.confirmPassword) next.confirmPassword = 'Passwords do not match.';
@@ -76,7 +76,7 @@ export function SignUpPage() {
         <Field id="student-number" label="Student number" value={form.studentNumber} error={errors.studentNumber} onChange={value => update('studentNumber', value.replace(/\D/g, '').slice(0, 9))} inputMode="numeric" maxLength={9} placeholder="9 digits" />
         <div className="form-group"><label htmlFor="signup-university">University</label><select id="signup-university" value={form.university} onChange={event => update('university', event.target.value)} className={errors.university ? 'input-error' : ''}><option value="">Select your university</option>{universities.map(university => <option key={university.id} value={university.name}>{university.name}</option>)}</select>{fieldError('university')}</div>
         <Field id="student-email" label="University email address" type="email" placeholder="student@university.ac.za" value={form.email} error={errors.email} onChange={value => update('email', value)} onBlur={() => { if (form.email.trim()) setErrors(current => ({ ...current, email: emailError(form.email) })); }} autoComplete="email" />
-        <Field id="mobile-number" label="Mobile number" optional type="tel" placeholder="+27 00 000 0000" value={form.mobileNumber} error={errors.mobileNumber} onChange={value => update('mobileNumber', value)} autoComplete="tel" />
+        <Field id="mobile-number" label="Mobile number" optional type="tel" placeholder="10 digits, e.g. 0712345678" value={form.mobileNumber} error={errors.mobileNumber} onChange={value => update('mobileNumber', normalizeMobileNumber(value))} inputMode="numeric" autoComplete="tel" />
         <div className="signup-skill-picks">
           <p className="field-hint">Popular starter skills. Choose at least one in each group; you can change these later.</p>
           <SkillChoices label="I can teach" skills={recommendedSkills.map(skill => skill.name)} selected={skillsTeach} onToggle={skill => toggleSkill(skill, skillsTeach, setSkillsTeach)} error={errors.skillsTeach} />

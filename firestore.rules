@@ -51,7 +51,8 @@ service cloud.firestore {
           'isOnline', 'lastSeen', 'availability', 'verifiedSkills',
           'studentVerified', 'accountStatus', 'skillLevels',
           'introductionVideoUrl', 'introductionVideoVisibility', 'learningGoals',
-          'preferredTeachingStyle', 'languages', 'sessionPreference', 'weeklyAvailability'
+          'preferredTeachingStyle', 'languages', 'sessionPreference', 'weeklyAvailability',
+          'hiddenFromDiscovery'
         ])
         && profile.get('uid', null) == userId
         && profile.get('displayName', null) == user.get('displayName', null)
@@ -69,6 +70,7 @@ service cloud.firestore {
         && profile.get('verifiedSkills', null) == user.get('verifiedSkills', null)
         && profile.get('studentVerified', null) == user.get('studentVerified', null)
         && profile.get('accountStatus', null) == user.get('accountStatus', null)
+        && profile.get('hiddenFromDiscovery', null) == user.get('hiddenFromDiscovery', null)
         && profile.get('skillLevels', null) == user.get('skillLevels', null)
         && profile.get('introductionVideoUrl', null) == (
           user.get('introductionVideoVisibility', 'members') == 'members'
@@ -630,6 +632,13 @@ service cloud.firestore {
     // Written only by the server (Admin SDK) once the emailed login PIN is entered; the
     // client compares authTime with its own sign-in to decide whether to ask for a PIN.
     // loginPins (the hashed PINs) has no rule, so clients can never read it.
+    // Activity and performance summary shown on profiles. Written only by the EduSwap server,
+    // which can count matches and sessions that students themselves are not allowed to read.
+    match /publicStats/{userId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /loginVerifications/{userId} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow write: if false;

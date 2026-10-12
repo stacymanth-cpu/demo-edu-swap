@@ -35,4 +35,24 @@ test.describe.serial('Completing a session', () => {
     await expect(page.locator('.complete-btn')).toHaveCount(0);
     expect(await credits(lerato.uid)).toBe(STARTING_CREDITS - CREDITS_PER_SESSION);
   });
+
+  test('the teacher\'s profile shows the session in their activity and performance', async ({ page }) => {
+    // First visit to the tutor page in a run: the dev server compiles it on demand, which can be slow.
+    test.setTimeout(120_000);
+    // The EduSwap server recomputes the public summary after the completion.
+    const stats = async () => (await emulatorAdmin().db.doc(`publicStats/${thabo.uid}`).get()).data();
+    await expect.poll(async () => (await stats())?.sessionsTaught, { timeout: 20_000 }).toBe(1);
+    expect(await stats()).toMatchObject({ partners: 1, sessionsCompleted: 1, sessionsLearned: 0, hoursTaught: 1, completionRate: 100 });
+
+    // Another student opens Thabo's profile and reads his track record.
+    await signIn(page, lerato);
+    await page.goto(`/tutor/${thabo.uid}`);
+    const panel = page.locator('.performance-panel');
+    await expect(panel.getByRole('heading', { name: 'Progress report' })).toBeVisible({ timeout: 60_000 });
+    await expect(panel.locator('.performance-tile', { hasText: 'Sessions completed' }).locator('strong')).toHaveText('1');
+    await expect(panel.locator('.performance-tile', { hasText: 'Partners matched' }).locator('strong')).toHaveText('1');
+    await expect(panel.getByText('Taught a Statistics session')).toBeVisible();
+    // Partners are never named in the public activity.
+    await expect(panel.getByText('Lerato')).toHaveCount(0);
+  });
 });

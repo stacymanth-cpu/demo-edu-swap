@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPasswordRequirements, validateEmail, validatePassword, validateProfile } from './validation';
+import { getPasswordRequirements, normalizeMobileNumber, validateEmail, validateMobileNumber, validatePassword, validateProfile } from './validation';
 
 describe('validation utilities', () => {
   it('validateEmail accepts valid emails and rejects invalid ones', () => {
@@ -10,6 +10,21 @@ describe('validation utilities', () => {
     expect(validateEmail('.user@example.com')).toBe(false);
     expect(validateEmail('user@example..com')).toBe(false);
     expect(validateEmail('user@localhost')).toBe(false);
+  });
+
+  it('validateMobileNumber accepts exactly 10 digits', () => {
+    expect(validateMobileNumber('0712345678')).toBe(true);
+    expect(validateMobileNumber('071234567')).toBe(false);
+    expect(validateMobileNumber('07123456789')).toBe(false);
+    expect(validateMobileNumber('071 234 5678')).toBe(false);
+    expect(validateMobileNumber('+27712345678')).toBe(false);
+  });
+
+  it('normalizeMobileNumber keeps at most 10 digits and converts +27 numbers', () => {
+    expect(normalizeMobileNumber('071 234-5678')).toBe('0712345678');
+    expect(normalizeMobileNumber('+27 71 234 5678')).toBe('0712345678');
+    expect(normalizeMobileNumber('071234567890')).toBe('0712345678');
+    expect(normalizeMobileNumber('abc')).toBe('');
   });
 
   it('validatePassword enforces rules', () => {

@@ -26,6 +26,8 @@ export interface User {
   achievementIds?: string[];
   isAdmin?: boolean;
   accountStatus?: 'active' | 'suspended' | 'deactivated';
+  /** Hidden from Explore, search and recommendations after reports (automatic moderation). */
+  hiddenFromDiscovery?: boolean;
   studentVerified?: boolean;
   availability?: 'available' | 'teaching' | 'pending' | 'offline';
   skillLevels?: Record<string, 'Beginner' | 'Intermediate' | 'Advanced'>;
@@ -286,4 +288,28 @@ export interface SkillInfo {
   description?: string;
   /** Set when an admin removes the skill; archived skills are hidden from students. */
   isArchived?: boolean;
+}
+
+/** Progress report shown on a student's profile (publicStats/{uid}, server-written). */
+export interface ProfileStats {
+  partners: number;
+  matchRequestsReceived: number;
+  matchAcceptanceRate: number | null;
+  sessionsCompleted: number;
+  sessionsTaught: number;
+  sessionsLearned: number;
+  sessionsCancelled: number;
+  sessionsUpcoming: number;
+  completionRate: number | null;
+  hoursTaught: number;
+  hoursLearned: number;
+  topSkills: { skill: string; count: number }[];
+  monthly: { month: string; sessions: number }[];
+  /** Added with reviews and levels; missing from reports written before that. */
+  reviewsReceived?: number;
+  averageRating?: number | null;
+  reviewsGiven?: number;
+  progress?: { level: string; levelNumber: number; percent: number; nextLevel: string | null; sessionsToNextLevel: number };
+  recentActivity: { type: 'matched' | 'taught' | 'learned' | 'reviewed'; skill: string; at: string; rating?: number }[];
+  lastActiveAt: string | null;
 }

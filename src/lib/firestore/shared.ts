@@ -75,6 +75,7 @@ export function mapUserData(data: DocumentData, uid: string, includePrivateField
     lastSeen: profile.lastSeen ? toDate(profile.lastSeen) : null,
     isAdmin: includePrivateFields && data.isAdmin === true,
     accountStatus: profile.accountStatus || 'active',
+    hiddenFromDiscovery: profile.hiddenFromDiscovery === true,
     studentVerified: profile.studentVerified === true,
     availability: profile.availability || (profile.isOnline ? 'available' : 'offline'),
     skillLevels: profile.skillLevels || {},

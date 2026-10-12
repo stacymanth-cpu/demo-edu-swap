@@ -26,6 +26,8 @@ export const STUDENTS = {
   thabo: student('thabo', 'Thabo', 'Khumalo', ['Statistics'], ['Physics']),
   // Account states.
   sipho: student('sipho', 'Sipho', 'Ndlovu', ['Accounting'], ['French'], { accountStatus: 'suspended' }),
+  // Automatic moderation: the student who gets reported.
+  zanele: student('zanele', 'Zanele', 'Mthembu', ['Graphic Design'], ['Spanish']),
   admin: student('admin', 'Ada', 'Admin', ['Mathematics'], ['Spanish'], { isAdmin: true }),
 };
 

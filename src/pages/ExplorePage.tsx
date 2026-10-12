@@ -90,7 +90,7 @@ export function ExplorePage() {
 
   const matchesUserFilters = (u: User) => {
     if (u.uid === user?.uid) return false;
-    if (u.accountStatus === 'deactivated' || u.accountStatus === 'suspended') return false;
+    if (u.accountStatus === 'deactivated' || u.accountStatus === 'suspended' || u.hiddenFromDiscovery) return false;
     if (user?.blockedUserIds?.includes(u.uid) || u.blockedUserIds?.includes(user?.uid || '')) return false;
     if (hiddenUserIds.includes(u.uid)) return false;
     if (u.skillsTeach.length > 0 && u.studentVerified !== true) return false;
@@ -111,6 +111,8 @@ export function ExplorePage() {
   };
 
   const filteredUsers = users.filter(matchesUserFilters).sort(sortUsers);
+  // Students who may appear anywhere in Explore: not suspended, deactivated or hidden after reports.
+  const discoverableUsers = users.filter(u => u.accountStatus !== 'deactivated' && u.accountStatus !== 'suspended' && !u.hiddenFromDiscovery);
   const visibleRecommendations = aiRecommendations.filter(recommendation => matchesUserFilters(recommendation.user)).slice(0, 3);
   const universities = Array.from(new Set(users.map(candidate => candidate.university).filter(Boolean))).sort();
   const languages = Array.from(new Set(users.flatMap(candidate => candidate.languages || []))).sort();
@@ -442,7 +444,7 @@ export function ExplorePage() {
             <p className="skill-detail-description">{getSkillCardDescription(selectedSkill)}</p>
             <div className="skill-detail-users">
               <h4>People interested in this skill</h4>
-              {users.filter(u => {
+              {discoverableUsers.filter(u => {
                 const normalized = selectedSkill.name.trim().toLowerCase();
                 return u.uid !== user?.uid && (
                   u.skillsTeach.some(skill => skill.trim().toLowerCase() === normalized) ||
@@ -450,7 +452,7 @@ export function ExplorePage() {
                 );
               }).length === 0 ? (
                 <p className="no-options">No users have listed this skill yet.</p>
-              ) : users.filter(u => {
+              ) : discoverableUsers.filter(u => {
                 const normalized = selectedSkill.name.trim().toLowerCase();
                 return u.uid !== user?.uid && (
                   u.skillsTeach.some(skill => skill.trim().toLowerCase() === normalized) ||

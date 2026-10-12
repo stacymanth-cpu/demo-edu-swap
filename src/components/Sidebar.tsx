@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Compass, Users, MessageCircle, User, LogOut, Coins, Sparkles, Video, Bell, Menu, X } from 'lucide-react';
+import { Home, Compass, Users, MessageCircle, User, LogOut, Coins, Sparkles, Video, Bell, Menu, X, ShieldAlert, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToChatRooms, subscribeNotifications, markNotificationRead, subscribeSessions } from '../lib/firestoreService';
 import type { Notification, Session } from '../types';
@@ -173,6 +173,28 @@ export function Sidebar() {
 
         {user && (
           <div className="sidebar-footer">
+            {/* Stays until the student is verified; the banner above the page can be dismissed. */}
+            {!user.studentVerified && !user.isAdmin && (
+              <button
+                type="button"
+                className="verify-account-prompt"
+                id="btn-verify-account"
+                onClick={() => {
+                  if (location.pathname === '/profile') {
+                    document.getElementById('student-verification')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  } else {
+                    navigate('/profile#student-verification');
+                  }
+                }}
+              >
+                <ShieldAlert size={18} aria-hidden="true" />
+                <span>
+                  <strong>Please verify your account</strong>
+                  <small>Confirm your university email. It takes a minute.</small>
+                </span>
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            )}
             <div className="credit-display">
               <Coins size={16} />
               <span>Credits</span>

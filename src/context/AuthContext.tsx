@@ -11,6 +11,7 @@ import { auth } from '../lib/firebase';
 import { getUser, createUser, subscribeUser, updateUser as fsUpdateUser, DEFAULT_VERIFIED_EMAIL_DOMAINS, getVerifiedEmailDomains, isUniversityEmail, sendUniversityVerificationEmail, tryAutoVerifyStudent } from '../lib/firestoreService';
 import type { User } from '../types';
 import { rememberEmail } from '../lib/rememberedLogin';
+import { clearAccountUnavailable, markAccountUnavailable } from '../lib/accountNotice';
 import { isLoginVerified, sendLoginPin, trustNewAccount, verifyLoginPin } from '../lib/loginPin';
 
 interface AuthContextType {
@@ -133,11 +134,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Reflect admin-driven changes, such as registration approval or rejection,
-  // in the active session without requiring a refresh or another login.
+  // Reflect changes made elsewhere (verification, admin edits, automatic moderation) in the
+  // active session. An account suspended or deactivated while in use is signed out at once.
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeUser(user.uid, updatedUser => {
+      if (updatedUser?.accountStatus === 'suspended' || updatedUser?.accountStatus === 'deactivated') {
+        markAccountUnavailable();
+        void signOut(auth).finally(() => window.location.assign('/login'));
+        return;
+      }
       if (updatedUser) setUser(updatedUser);
     });
   }, [user?.uid]);
@@ -179,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return 'This account is currently unavailable. Please contact EduSwap support.';
         }
       }
+      clearAccountUnavailable();
       // The app opens once the emailed PIN is entered (see verifyPin).
       setPinEmail(cred.user.email || email);
       setSessionExpired(false);

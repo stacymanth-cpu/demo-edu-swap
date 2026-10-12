@@ -98,7 +98,7 @@ export function getMatchScore(current: User, candidate: User): number {
 export function getAiRecommendations(current: User, allUsers: User[]): AiMatchRecommendation[] {
   return allUsers
     .filter(u => u.uid !== current.uid)
-    .filter(u => u.accountStatus !== 'deactivated' && u.accountStatus !== 'suspended')
+    .filter(u => u.accountStatus !== 'deactivated' && u.accountStatus !== 'suspended' && !u.hiddenFromDiscovery)
     .filter(u => !current.blockedUserIds?.includes(u.uid) && !u.blockedUserIds?.includes(current.uid))
     .map(user => {
       const commonTeach = getCompatibleTeachSkills(current.skillsTeach, user.skillsLearn);

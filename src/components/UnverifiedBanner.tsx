@@ -10,7 +10,10 @@ function readDismissed(): boolean {
   try { return sessionStorage.getItem(DISMISS_KEY) === '1'; } catch { return false; }
 }
 
-/** Tells a signed-in student that their account is not verified yet, on every page. */
+/**
+ * Tells a signed-in student, on every page, that their account is not verified yet, or that
+ * their profile was hidden from Explore after reports (automatic moderation).
+ */
 export function UnverifiedBanner() {
   const { user } = useAuth();
   const location = useLocation();
@@ -18,14 +21,13 @@ export function UnverifiedBanner() {
 
   // Hidden on call screens, where a banner would cover the video.
   const onCallScreen = location.pathname === '/video-call' || location.pathname === '/group-call';
-  if (!user || user.studentVerified || user.isAdmin || dismissed || onCallScreen) return null;
+  if (!user || user.isAdmin || dismissed || onCallScreen) return null;
+  const hidden = user.hiddenFromDiscovery === true;
+  if (!hidden && user.studentVerified) return null;
 
-  const status = user.registrationVerificationStatus;
-  const message = status === 'pending'
-    ? 'Your account is not verified yet. Your proof of registration is waiting for admin review.'
-    : status === 'rejected'
-      ? 'Your account is not verified. Your registration document was not approved; please upload a clear, current one.'
-      : 'Your account is not verified. Verify with your university email or upload proof of registration to accept tutor bookings.';
+  const message = hidden
+    ? 'Your profile is hidden from Explore because several students reported it. You can still use your matches, chats and sessions. If you think this is a mistake, contact EduSwap support.'
+    : 'Please verify your account. Confirm your university email to appear in Explore and accept tutor bookings.';
 
   const dismiss = () => {
     setDismissed(true);
@@ -33,11 +35,11 @@ export function UnverifiedBanner() {
   };
 
   return (
-    <div className={`unverified-banner ${status === 'rejected' ? 'rejected' : ''}`} role="status">
+    <div className="unverified-banner" role="status">
       <ShieldAlert size={18} aria-hidden="true" />
       <p>{message}</p>
-      {status !== 'pending' && location.pathname !== '/profile' && (
-        <Link to="/profile#student-verification" className="unverified-banner-action">Verify now</Link>
+      {!hidden && location.pathname !== '/profile' && (
+        <Link to="/profile#student-verification" className="unverified-banner-action">Verify my account</Link>
       )}
       <button type="button" onClick={dismiss} aria-label="Hide this message for now"><X size={16} /></button>
     </div>

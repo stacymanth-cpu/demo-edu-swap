@@ -17,6 +17,7 @@ const publicProfileFields = [
   'verifiedSkills',
   'studentVerified',
   'accountStatus',
+  'hiddenFromDiscovery',
   'skillLevels',
   'introductionVideoUrl',
   'introductionVideoVisibility',

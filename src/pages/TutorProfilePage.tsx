@@ -8,6 +8,7 @@ import { isValidTeamsLink } from '../lib/meetingLinks';
 import type { Comment, User } from '../types';
 import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
 import { VerifiedBadge } from '../components/VerifiedBadge';
+import { PerformancePanel } from '../components/PerformancePanel';
 import './TutorProfilePage.css';
 
 export function TutorProfilePage() {
@@ -353,6 +354,8 @@ export function TutorProfilePage() {
           </div>
         </section>
       </div>
+
+      <PerformancePanel uid={tutor.uid} ownProfile={user?.uid === tutor.uid} />
 
       <section className="review-section">
         <div className="reputation-heading"><div><h2>Reviews and reputation</h2><p>Feedback from completed EduSwap sessions.</p></div>{verifiedReviewCount > 0 && <span className="verified-review-total"><BadgeCheck size={15} /> {verifiedReviewCount} verified</span>}</div>

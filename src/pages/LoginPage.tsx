@@ -5,6 +5,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { getRememberedEmail } from '../lib/rememberedLogin';
+import { wasAccountUnavailable } from '../lib/accountNotice';
 import { validateEmail } from '../lib/validation';
 import logoImg from '../assets/logo.webp';
 import './AuthPages.css';
@@ -18,6 +19,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [accountUnavailable] = useState(wasAccountUnavailable);
   const [passwordError, setPasswordError] = useState('');
 
   // Password reset state
@@ -121,6 +123,11 @@ export function LoginPage() {
             <p className="auth-subtitle">Sign in to continue learning</p>
 
             {error && <div className="auth-error">{error}</div>}
+            {accountUnavailable && !error && (
+              <div className="auth-error" style={{ marginBottom: 16 }} role="alert">
+                You were signed out because this account was suspended. If you think this is a mistake, contact EduSwap support.
+              </div>
+            )}
             {sessionExpired && (
               <div className="auth-error" style={{ marginBottom: 16 }}>
                 Your saved session has expired. Please sign in again.

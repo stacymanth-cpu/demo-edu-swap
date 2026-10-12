@@ -7,8 +7,9 @@ const WATCH_INTERVAL_MS = 5_000;
 const WATCH_DURATION_MS = 15 * 60_000;
 
 /**
- * Instant verification for students whose sign-in email belongs to an approved university.
- * Others are told to upload proof of registration instead (shown below this card).
+ * Automatic verification for students whose sign-in email belongs to an approved university.
+ * Sign-up only accepts those addresses, so the other branch is for an account whose domain was
+ * later removed from the admin's list.
  */
 export function UniversityEmailVerification({ email }: { email: string }) {
   const [domains, setDomains] = useState<string[] | null>(null);
@@ -59,7 +60,7 @@ export function UniversityEmailVerification({ email }: { email: string }) {
   if (!isUniversityEmail(email, domains)) {
     return (
       <p className="university-email-note">
-        <MailCheck size={15} aria-hidden="true" /> Students who sign up with their university email ({domains.map(domain => `@${domain}`).join(', ')}) are verified instantly. Otherwise, upload proof of registration below.
+        <MailCheck size={15} aria-hidden="true" /> Students are verified automatically by confirming a university email ({domains.map(domain => `@${domain}`).join(', ')}). Your email address is not on this list, so your account cannot be verified automatically.
       </p>
     );
   }

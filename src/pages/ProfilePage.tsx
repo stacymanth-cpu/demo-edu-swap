@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import { Star, MapPin, BookOpen, Coins, Calendar, TrendingUp, ArrowUp, ArrowDown, Loader2, Pencil, X, Plus, Save, Camera, BadgeCheck, CircleCheck, Circle, ChevronDown, ShieldAlert, ShieldCheck, UserRoundCheck, Video, Award, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { createGroupCallRoom, getSessions, getTransactions, getReviewsAbout, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, uploadRegistrationDocument, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
+import { createGroupCallRoom, getSessions, getTransactions, getReviewsAbout, getSkillsCatalog, getMatches, subscribeMatches, subscribeTransactions, subscribeUserReviews, uploadProfilePhoto, saveIntroVideo, updateIntroVideoAccess, isStoredIntroVideo } from '../lib/firestoreService';
 import { IntroVideoRecorder } from '../components/introVideo/IntroVideoRecorder';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { UniversityEmailVerification } from '../components/UniversityEmailVerification';
+import { PerformancePanel } from '../components/PerformancePanel';
 import { IntroVideoPlayer } from '../components/introVideo/IntroVideoPlayer';
 import { SkillPicker } from '../components/SkillPicker';
 import { format } from 'date-fns';
@@ -54,10 +55,6 @@ export function ProfilePage() {
   const [saveError, setSaveError] = useState('');
   const [allSkillsInfo, setAllSkillsInfo] = useState<SkillInfo[]>([]);
   const [linkedStudents, setLinkedStudents] = useState<SkillMatch[]>([]);
-  const [registrationUploading, setRegistrationUploading] = useState(false);
-  const [registrationUploadProgress, setRegistrationUploadProgress] = useState(0);
-  const [displayedRegistrationProgress, setDisplayedRegistrationProgress] = useState(0);
-  const [registrationUploadNotice, setRegistrationUploadNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [groupCallCreating, setGroupCallCreating] = useState(false);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [editLearningGoals, setEditLearningGoals] = useState('');
@@ -77,26 +74,6 @@ export function ProfilePage() {
     setPendingVideoPreviewUrl(previewUrl);
     return () => URL.revokeObjectURL(previewUrl);
   }, [pendingIntroductionVideo]);
-
-  // Firebase can remain at zero until its first network chunk is acknowledged.
-  // Keep the UI moving while leaving the final percentage for Firestore submission.
-  useEffect(() => {
-    if (!registrationUploading && displayedRegistrationProgress >= registrationUploadProgress) return;
-    const timer = window.setInterval(() => {
-      setDisplayedRegistrationProgress(current => {
-        const target = registrationUploading
-          ? Math.max(registrationUploadProgress, Math.min(95, current + 1))
-          : registrationUploadProgress;
-        if (current >= target) {
-          window.clearInterval(timer);
-          return current;
-        }
-        const step = Math.max(1, Math.ceil((target - current) / 8));
-        return Math.min(target, current + step);
-      });
-    }, 120);
-    return () => window.clearInterval(timer);
-  }, [displayedRegistrationProgress, registrationUploadProgress, registrationUploading]);
 
   useEffect(() => {
     if (!user) return;
@@ -369,7 +346,7 @@ export function ProfilePage() {
           {!user.studentVerified && (
             <a href="#student-verification" className="profile-unverified-label">
               <ShieldAlert size={14} aria-hidden="true" />
-              {user.registrationVerificationStatus === 'pending' ? 'Not verified yet: awaiting admin review' : 'Your account is not verified'}
+              Your account is not verified
             </a>
           )}
 
@@ -509,15 +486,9 @@ export function ProfilePage() {
         <section className="profile-section profile-section-wide animate-fade-in-up" id="student-verification">
           <h2>Student verification</h2>
           {!user.studentVerified && <UniversityEmailVerification email={user.email} />}
-          {/* Once verified, read mode shows only the status; the explanations appear while editing. */}
-          {(editing || !user.studentVerified) && <p className="verification-copy">{editing ? 'Upload proof of registration for admin review. Only approved students can accept tutor bookings.' : 'Only approved students can accept tutor bookings. Click Edit Profile to upload proof of registration.'}</p>}
-          {editing && <label className="registration-document-upload"><span>Registration document</span><input type="file" accept="application/pdf,image/jpeg,image/png" disabled={registrationUploading} onChange={async e => { const input = e.currentTarget; const file = input.files?.[0]; if (!file) return; setRegistrationUploadNotice(null); setRegistrationUploadProgress(0); setDisplayedRegistrationProgress(0); setRegistrationUploading(true); try { await uploadRegistrationDocument(user.uid, file, setRegistrationUploadProgress); setRegistrationUploadProgress(100); setDisplayedRegistrationProgress(100); setRegistrationUploadNotice({ type: 'success', message: '100% uploaded. Your verification is now pending admin approval.' }); } catch (error) { console.error('Registration upload failed:', error); setRegistrationUploadProgress(0); setDisplayedRegistrationProgress(0); setRegistrationUploadNotice({ type: 'error', message: error instanceof Error ? error.message : 'Document upload failed. Please check your connection and try again.' }); } finally { setRegistrationUploading(false); input.value = ''; } }} /><small className="upload-help">PDF, JPG, or PNG. Maximum file size: 5 MB.</small></label>}
-          {(registrationUploading || registrationUploadProgress === 100) && <div className="registration-upload-progress"><div className="registration-upload-progress-label"><span>{displayedRegistrationProgress < 100 ? 'Uploading registration document' : 'Upload complete'}</span><strong>{displayedRegistrationProgress}%</strong></div><progress aria-label="Registration document upload progress" max={100} value={displayedRegistrationProgress}>{displayedRegistrationProgress}%</progress></div>}
-          {/* The upload's "pending approval" message is hidden once an admin has reviewed it. */}
-          {editing && user.registrationVerificationStatus === 'approved' && <div className="registration-upload-notice success" role="status"><BadgeCheck size={17} aria-hidden="true" /><span>Your registration was approved. You are a verified student and can accept tutor bookings.</span></div>}
-          {user.registrationVerificationStatus === 'rejected' && <div className="registration-upload-notice error" role="status"><span>Your registration document was not approved. Please upload a clear, current proof of registration.</span></div>}
-          {registrationUploadNotice && (registrationUploadNotice.type === 'error' || user.registrationVerificationStatus === 'pending') && <div className={`registration-upload-notice ${registrationUploadNotice.type}`} role={registrationUploadNotice.type === 'error' ? 'alert' : 'status'}>{registrationUploadNotice.type === 'success' && <CircleCheck size={17} aria-hidden="true" />}<span>{registrationUploadNotice.message}</span></div>}
-          <span className={`verification-status ${user.registrationVerificationStatus || 'not_submitted'}`}>{user.registrationVerificationStatus === 'approved' && <BadgeCheck size={15} aria-hidden="true" />}Verification: {(user.registrationVerificationStatus || 'not_submitted').replaceAll('_', ' ')}</span>
+          {/* Verification is automatic: confirming a university email verifies the account. */}
+          {!user.studentVerified && <p className="verification-copy">Only verified students can accept tutor bookings. Confirm your university email above and your account is verified automatically.</p>}
+          <span className={`verification-status ${user.studentVerified ? 'approved' : 'not_submitted'}`}>{user.studentVerified && <BadgeCheck size={15} aria-hidden="true" />}Verification: {user.studentVerified ? 'verified' : 'not verified yet'}</span>
         </section>
 
         <section className="profile-section profile-section-wide animate-fade-in-up">
@@ -651,6 +622,8 @@ export function ProfilePage() {
             </>
           )}
         </section>
+
+        <PerformancePanel uid={user.uid} ownProfile className="profile-section profile-section-wide" />
 
         {/* Credit History */}
         <section className="profile-section profile-section-wide profile-activity-section animate-fade-in-up" style={{ animationDelay: '0.2s' }}>

@@ -3,6 +3,21 @@ export function validateEmail(email: string): boolean {
   return re.test(email);
 }
 
+/** A mobile number is exactly 10 digits, for example 0712345678. */
+export function validateMobileNumber(mobile: string): boolean {
+  return /^\d{10}$/.test(mobile);
+}
+
+/**
+ * Keeps only the digits of a typed or pasted mobile number, at most 10. A pasted +27 number
+ * (+27 71 234 5678) becomes its local 10-digit form (0712345678).
+ */
+export function normalizeMobileNumber(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  const local = digits.length === 11 && digits.startsWith('27') ? `0${digits.slice(2)}` : digits;
+  return local.slice(0, 10);
+}
+
 export function getPasswordRequirements(password: string): { label: string; message: string; met: boolean }[] {
   return [
     { label: 'At least 10 characters', message: 'Password must be at least 10 characters long', met: password.length >= 10 },

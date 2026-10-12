@@ -74,6 +74,15 @@ test.describe('Sign up', () => {
     await expect(page).toHaveURL(/\/signup$/);
   });
 
+  test('a mobile number that is not 10 digits is refused', async ({ page }) => {
+    await page.goto('/signup');
+    // Letters are dropped while typing, so only the 9 digits remain.
+    await fillSignUp(page, 'mobile.check@ump.ac.za', '071-234-567a');
+    await expect(page.locator('#mobile-number')).toHaveValue('071234567');
+    await expect(page.getByText('Mobile number must be exactly 10 digits.')).toBeVisible();
+    await expect(page).toHaveURL(/\/signup$/);
+  });
+
   test('a university email creates an account without asking for a PIN', async ({ page }) => {
     await page.goto('/signup');
     await fillSignUp(page, 'naledi@ump.ac.za');
@@ -84,15 +93,29 @@ test.describe('Sign up', () => {
     await page.reload();
     await expect(page.locator('#sidebar-nav')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Check your email' })).toHaveCount(0);
+
+    // The new account is not verified yet: the sidebar keeps asking, and leads to verification.
+    const prompt = page.locator('#btn-verify-account');
+    await expect(prompt).toContainText('Please verify your account');
+    await prompt.click();
+    await expect(page).toHaveURL(/\/profile/);
+    await expect(page.getByText('Instant verification')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Send verification link' })).toBeVisible();
+  });
+
+  test('verified students are not asked to verify', async ({ page }) => {
+    await signIn(page, STUDENTS.ayanda);
+    await expect(page.locator('#btn-verify-account')).toHaveCount(0);
   });
 });
 
-async function fillSignUp(page: import('@playwright/test').Page, email: string) {
+async function fillSignUp(page: import('@playwright/test').Page, email: string, mobile?: string) {
   await page.locator('#first-name').fill('Naledi');
   await page.locator('#last-name').fill('Zulu');
   await page.locator('#student-number').fill('202412345');
   await page.locator('#signup-university').selectOption('University of Mpumalanga');
   await page.locator('#student-email').fill(email);
+  if (mobile) await page.locator('#mobile-number').pressSequentially(mobile);
   await page.locator('fieldset', { hasText: 'I can teach' }).getByRole('button', { name: 'Mathematics' }).click();
   await page.locator('fieldset', { hasText: 'I want to learn' }).getByRole('button', { name: 'Python' }).click();
   await page.locator('#signup-password').fill(PASSWORD);

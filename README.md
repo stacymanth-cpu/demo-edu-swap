@@ -163,6 +163,36 @@ The same server emails the 6-digit login PIN asked for at every sign-in. Set
 empty, the server prints each PIN in its terminal instead (local testing only). If
 the server is not running, students cannot finish signing in.
 
+## Automation
+
+EduSwap is designed to run without day-to-day admin work:
+
+- **Student verification** is automatic. Sign-up accepts only university emails on the
+  admin's list (`settings/platform.verifiedEmailDomains`), and confirming that email verifies
+  the student. There is no document upload or manual approval.
+- **Reports** hide a student automatically once 3 different verified students in good standing
+  have open reports about them from the last 30 days (`server/autoModerationRules.ts`). Hidden
+  students (`hiddenFromDiscovery`) disappear from Explore, search and recommendations and see a
+  notice, but can still sign in and use their matches, chats and sessions. Repeat reports by one
+  student count once and admins are never hidden. The reports that counted are marked
+  `reviewing`, so when an admin clicks **Show in Explore** (Admin > Students) the same reports
+  do not hide the student again. Each automatic action is recorded in `auditLogs` with
+  `adminId: "system"`. Students cannot change the flag themselves; the rules enforce it.
+- **Progress report** on every profile is kept current by the server
+  (`server/profileStats.ts`) after every match, session and review: a level (New member,
+  Getting started at 1 completed session, Active swapper at 5, Experienced at 15, Mentor at 30),
+  partners matched, request acceptance rate, reviews received and average rating, sessions taught
+  and learned, hours, completion rate, sessions per month, most-taught skills and recent
+  activity. Matches and sessions are private to their participants, so the server computes
+  each student's summary into `publicStats/{uid}`, which any signed-in student can read
+  and nobody else can write. Partners are never named. Set `PROFILE_STATS=off` to disable it.
+- **Suspension** stays a manual admin action. A student suspended while signed in is signed out
+  immediately and told why.
+
+Automatic moderation runs inside the EduSwap server (`server/autoModeration.ts`), so the
+server must be running for it to act; reports filed while it was down are handled when it
+starts. Set `AUTO_MODERATION=off` to disable it.
+
 ## Hosting the PIN server (free)
 
 The server runs on Render's free plan using `render.yaml`. Free instances sleep after
