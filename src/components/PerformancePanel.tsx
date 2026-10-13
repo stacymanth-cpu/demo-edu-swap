@@ -43,7 +43,7 @@ export function PerformancePanel({ uid, person, ownProfile = false, className = 
     { icon: CheckCircle2, label: 'Sessions completed', value: String(stats?.sessionsCompleted ?? 0), detail: `${stats?.sessionsTaught ?? 0} taught · ${stats?.sessionsLearned ?? 0} learned` },
     { icon: Star, label: 'Average rating', value: stats?.averageRating ? `${stats.averageRating.toFixed(1)}★` : '—', detail: `${reviewCount(stats?.reviewsReceived ?? 0)} received · ${stats?.reviewsGiven ?? 0} given` },
     { icon: GraduationCap, label: 'Hours taught', value: String(stats?.hoursTaught ?? 0), detail: `${stats?.hoursLearned ?? 0} hours learned` },
-    { icon: Activity, label: 'Completion rate', value: percent(stats?.completionRate ?? null), detail: `${stats?.sessionsCancelled ?? 0} cancelled · ${stats?.sessionsUpcoming ?? 0} upcoming` },
+    { icon: Activity, label: 'Completion rate', value: percent(stats?.completionRate ?? null), detail: `${stats?.sessionsCancelled ?? 0} cancelled · ${stats?.sessionsExpired ?? 0} expired · ${stats?.sessionsUpcoming ?? 0} upcoming` },
   ];
   const overall = [
     ['Match requests received', String(stats?.matchRequestsReceived ?? 0)],

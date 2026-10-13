@@ -76,7 +76,7 @@ export function progressReportContent(person: ReportPerson, stats: ProfileStats 
       ['Hours taught / learned', `${stats?.hoursTaught ?? 0} / ${stats?.hoursLearned ?? 0}`],
       ['Match requests received', String(stats?.matchRequestsReceived ?? 0)],
       ['Completion rate', percent(stats?.completionRate)],
-      ['Cancelled / upcoming sessions', `${stats?.sessionsCancelled ?? 0} / ${stats?.sessionsUpcoming ?? 0}`],
+      ['Cancelled / expired / upcoming', `${stats?.sessionsCancelled ?? 0} / ${stats?.sessionsExpired ?? 0} / ${stats?.sessionsUpcoming ?? 0}`],
       ['Average rating', stats?.averageRating ? `${stats.averageRating.toFixed(1)} out of 5 (${reviews} review${reviews === 1 ? '' : 's'})` : 'No reviews yet'],
       ['Reviews given', String(stats?.reviewsGiven ?? 0)],
       ['Last active', stats?.lastActiveAt ? dateText(stats.lastActiveAt) : '—'],

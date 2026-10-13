@@ -70,8 +70,10 @@ export interface ProfileStats {
   sessionsTaught: number;
   sessionsLearned: number;
   sessionsCancelled: number;
+  /** Scheduled sessions whose time has passed without being completed or cancelled. */
+  sessionsExpired: number;
   sessionsUpcoming: number;
-  /** Completed ÷ (completed + cancelled); null until a session finished either way. */
+  /** Completed ÷ (completed + cancelled + expired); null until a session finished either way. */
   completionRate: number | null;
   hoursTaught: number;
   hoursLearned: number;
@@ -110,11 +112,19 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function computeProfileStats(uid: string, matches: MatchRecord[], sessions: SessionRecord[], reviews: ReviewRecord[] = [], now = new Date()): ProfileStats {
   const mine = matches.filter(m => m.user1Id === uid || m.user2Id === uid);
-  const accepted = mine.filter(m => m.status === 'accepted');
-  const partners = new Set(accepted.map(m => (m.user1Id === uid ? m.user2Id : m.user1Id))).size;
-  const received = mine.filter(m => m.user2Id === uid);
-  const answered = received.filter(m => m.status === 'accepted' || m.status === 'declined');
-  const acceptedReceived = answered.filter(m => m.status === 'accepted').length;
+  const partnerOf = (m: MatchRecord) => (m.user1Id === uid ? m.user2Id : m.user1Id);
+  // The same two students can have several match records (repeat requests); count each
+  // partner once, from their earliest accepted match.
+  const accepted = [...new Map(mine.filter(m => m.status === 'accepted')
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .reverse().map(m => [partnerOf(m), m])).values()];
+  const partners = accepted.length;
+  // Requests this student received, one per requester: accepted if any was accepted.
+  const byRequester = new Map<string, string[]>();
+  mine.filter(m => m.user2Id === uid).forEach(m => byRequester.set(m.user1Id, [...(byRequester.get(m.user1Id) ?? []), m.status]));
+  const requests = [...byRequester.values()];
+  const answered = requests.filter(statuses => statuses.includes('accepted') || statuses.includes('declined'));
+  const acceptedReceived = answered.filter(statuses => statuses.includes('accepted')).length;
 
   const own = sessions.filter(s => s.teacherId === uid || s.learnerId === uid);
   const completed = own.filter(s => s.status === 'completed');
@@ -122,12 +132,19 @@ export function computeProfileStats(uid: string, matches: MatchRecord[], session
   const learned = completed.filter(s => s.learnerId === uid);
   const cancelled = own.filter(s => s.status === 'cancelled').length;
   const upcoming = own.filter(s => s.status === 'scheduled' && s.scheduledAt.getTime() > now.getTime()).length;
+  const endsAt = (s: SessionRecord) => s.scheduledAt.getTime() + (s.durationMinutes ?? 60) * 60_000;
+  const expired = own.filter(s => s.status === 'scheduled' && endsAt(s) < now.getTime()).length;
   const hours = (list: SessionRecord[]) => round1(list.reduce((sum, s) => sum + (s.durationMinutes ?? 60), 0) / 60);
   const doneAt = (s: SessionRecord) => s.completedAt ?? s.scheduledAt;
 
-  const skillCounts = new Map<string, number>();
-  taught.forEach(s => { const k = (s.skill || 'Session').trim(); skillCounts.set(k, (skillCounts.get(k) ?? 0) + 1); });
-  const topSkills = [...skillCounts].map(([skill, count]) => ({ skill, count }))
+  // "Solving maths" and "solving maths" are the same skill; show the first spelling used.
+  const skillCounts = new Map<string, { skill: string; count: number }>();
+  taught.forEach(s => {
+    const skill = (s.skill || 'Session').trim();
+    const key = skill.toLowerCase();
+    skillCounts.set(key, { skill: skillCounts.get(key)?.skill ?? skill, count: (skillCounts.get(key)?.count ?? 0) + 1 });
+  });
+  const topSkills = [...skillCounts.values()]
     .sort((a, b) => b.count - a.count || a.skill.localeCompare(b.skill)).slice(0, 3);
 
   const monthly: { month: string; sessions: number }[] = [];
@@ -155,14 +172,15 @@ export function computeProfileStats(uid: string, matches: MatchRecord[], session
 
   return {
     partners,
-    matchRequestsReceived: received.length,
+    matchRequestsReceived: requests.length,
     matchAcceptanceRate: answered.length ? round1((acceptedReceived / answered.length) * 100) : null,
     sessionsCompleted: completed.length,
     sessionsTaught: taught.length,
     sessionsLearned: learned.length,
     sessionsCancelled: cancelled,
+    sessionsExpired: expired,
     sessionsUpcoming: upcoming,
-    completionRate: completed.length + cancelled ? round1((completed.length / (completed.length + cancelled)) * 100) : null,
+    completionRate: completed.length + cancelled + expired ? round1((completed.length / (completed.length + cancelled + expired)) * 100) : null,
     hoursTaught: hours(taught),
     hoursLearned: hours(learned),
     topSkills,

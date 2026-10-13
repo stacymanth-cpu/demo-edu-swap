@@ -74,6 +74,34 @@ describe('public profile statistics', () => {
   });
 });
 
+describe('real-world data', () => {
+  it('counts repeat match records with the same partner once, in partners, requests and activity', () => {
+    const stats = computeProfileStats('me', [
+      match({ user2Id: 'a', createdAt: daysAgo(20) }), match({ user2Id: 'a', createdAt: daysAgo(15) }),
+      match({ user1Id: 'b', user2Id: 'me', createdAt: daysAgo(12) }), match({ user1Id: 'b', user2Id: 'me', createdAt: daysAgo(11) }),
+      match({ user1Id: 'b', user2Id: 'me', status: 'declined', createdAt: daysAgo(10) }),
+    ], [], [], now);
+    expect(stats.partners).toBe(2);
+    expect(stats.matchRequestsReceived).toBe(1);
+    expect(stats.matchAcceptanceRate).toBe(100);
+    expect(stats.recentActivity.map(a => a.at)).toEqual([daysAgo(12).toISOString(), daysAgo(20).toISOString()]);
+  });
+
+  it('treats skills that differ only in capital letters as one', () => {
+    const stats = computeProfileStats('me', [], [session({ skill: 'Solving maths' }), session({ skill: 'solving maths ' }), session({ skill: 'Solving Maths' }), session({ skill: 'Coding' })], [], now);
+    expect(stats.topSkills).toEqual([{ skill: 'Solving maths', count: 3 }, { skill: 'Coding', count: 1 }]);
+  });
+
+  it('counts sessions whose time passed without completion as expired, in the completion rate', () => {
+    const stats = computeProfileStats('me', [], [
+      session({}), session({}), session({}),
+      session({ status: 'scheduled', scheduledAt: daysAgo(60), completedAt: undefined }),
+      session({ status: 'scheduled', scheduledAt: daysAgo(-1), completedAt: undefined }),
+    ], [], now);
+    expect(stats).toMatchObject({ sessionsCompleted: 3, sessionsExpired: 1, sessionsUpcoming: 1, completionRate: 75 });
+  });
+});
+
 describe('overall progress level', () => {
   it('moves through the levels as sessions are completed', () => {
     expect(progressLevel(1)).toEqual({ level: 'Getting started', levelNumber: 2, percent: 0, nextLevel: 'Active swapper', sessionsToNextLevel: 4 });

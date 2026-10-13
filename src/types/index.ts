@@ -299,6 +299,8 @@ export interface ProfileStats {
   sessionsTaught: number;
   sessionsLearned: number;
   sessionsCancelled: number;
+  /** Scheduled sessions whose time passed without being completed; missing from older reports. */
+  sessionsExpired?: number;
   sessionsUpcoming: number;
   completionRate: number | null;
   hoursTaught: number;
