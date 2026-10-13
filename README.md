@@ -182,7 +182,7 @@ EduSwap is designed to run without day-to-day admin work:
   (`server/profileStats.ts`) after every match, session and review: a level (New member,
   Getting started at 1 completed session, Active swapper at 5, Experienced at 15, Mentor at 30),
   partners matched, request acceptance rate, reviews received and average rating, sessions taught
-  and learned, hours, completion rate, sessions per month, most-taught skills and recent
+  and learned, hours, completion rate, an overall summary, most-taught skills and recent
   activity. Matches and sessions are private to their participants, so the server computes
   each student's summary into `publicStats/{uid}`, which any signed-in student can read
   and nobody else can write. Partners are never named. Set `PROFILE_STATS=off` to disable it.

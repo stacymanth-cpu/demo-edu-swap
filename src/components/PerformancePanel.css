@@ -123,9 +123,14 @@
   gap: 24px;
 }
 
-.performance-chart { margin: 0; min-width: 0; }
+.performance-overall {
+  min-width: 0;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+}
 
-.performance-chart figcaption,
+.performance-overall h3,
 .performance-activity h3 {
   font-size: 14px;
   font-weight: 600;
@@ -133,81 +138,24 @@
   margin: 0 0 12px;
 }
 
-.performance-bars {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  height: 150px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-primary);
-}
-
-.performance-bar-slot {
-  display: grid;
-  grid-template-rows: 1fr auto;
-  min-width: 0;
-}
-
-.performance-bar-track {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-/* One series: the app's primary hue; rounded data-end, square on the baseline. */
-.performance-bar {
-  position: relative;
-  width: min(28px, 70%);
-  min-height: 2px;
-  background: var(--primary-500);
-  border-radius: 4px 4px 0 0;
-  cursor: default;
-  outline-offset: 2px;
-}
-
-.performance-bar:hover,
-.performance-bar:focus-visible { background: var(--primary-600); }
-
-/* Hover / focus tooltip, larger than the mark. */
-.performance-bar:hover::after,
-.performance-bar:focus-visible::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--text-primary);
-  color: var(--bg-card);
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.performance-bar-value {
-  font-size: 12px;
-  font-weight: 600;
+.performance-overall-text {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
   color: var(--text-primary);
-  margin-bottom: 4px;
-  font-variant-numeric: tabular-nums;
 }
 
-.performance-bar-label {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  padding-top: 6px;
-}
-
-.performance-top-skills {
-  margin: 12px 0 0;
+.performance-overall dl { display: grid; gap: 8px; margin: 0; }
+.performance-overall dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-primary);
   font-size: 13px;
-  color: var(--text-secondary);
 }
+.performance-overall dt { color: var(--text-secondary); }
+.performance-overall dd { margin: 0; color: var(--text-primary); font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 
 .performance-activity { min-width: 0; }
 
@@ -246,7 +194,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .performance-bar, .performance-progress-fill { transition: none; }
+  .performance-progress-fill { transition: none; }
 }
 
 .performance-panel.profile-section { margin-top: 0; }

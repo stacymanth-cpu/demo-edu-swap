@@ -2,26 +2,19 @@ import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Activity, BookOpen, CheckCircle2, Download, GraduationCap, Handshake, Loader2, Star, TrendingUp, Users } from 'lucide-react';
 import { subscribeProfileStats } from '../lib/firestoreService';
-import { downloadProgressReport, type ReportPerson } from '../lib/progressReport';
+import { activityText, downloadProgressReport, overallSummary, type ReportPerson } from '../lib/progressReport';
 import type { ProfileStats } from '../types';
 import './PerformancePanel.css';
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const monthLabel = (key: string) => MONTH_NAMES[Number(key.slice(5, 7)) - 1] ?? key;
 const percent = (value: number | null) => (value === null ? '—' : `${Math.round(value)}%`);
 const reviewCount = (n: number) => `${n} review${n === 1 ? '' : 's'}`;
 
-const ACTIVITY_TEXT = {
-  matched: { icon: Handshake, text: (skill: string) => `Started a skill exchange: ${skill}` },
-  taught: { icon: GraduationCap, text: (skill: string) => `Taught a ${skill} session` },
-  learned: { icon: BookOpen, text: (skill: string) => `Learned ${skill} in a session` },
-  reviewed: { icon: Star, text: (skill: string, rating?: number) => `Received a ${rating ?? ''}-star review for ${skill}` },
-} as const;
+const ACTIVITY_ICON = { matched: Handshake, taught: GraduationCap, learned: BookOpen, reviewed: Star } as const;
 
 /**
- * A student's progress report on EduSwap: level, partners, sessions, reviews, completion,
- * monthly sessions and recent activity. Computed by the EduSwap server after every match,
- * session and review; partners and reviewers are never named. Every signed-in student can see it.
+ * A student's overall progress report on EduSwap: level, partners, sessions, reviews,
+ * completion and recent activity. Computed by the EduSwap server after every match, session
+ * and review; partners and reviewers are never named. Every signed-in student can see it.
  */
 export function PerformancePanel({ uid, person, ownProfile = false, className = '' }: { uid: string; person: ReportPerson; ownProfile?: boolean; className?: string }) {
   const [stats, setStats] = useState<ProfileStats | null | undefined>(undefined);
@@ -52,9 +45,12 @@ export function PerformancePanel({ uid, person, ownProfile = false, className = 
     { icon: GraduationCap, label: 'Hours taught', value: String(stats?.hoursTaught ?? 0), detail: `${stats?.hoursLearned ?? 0} hours learned` },
     { icon: Activity, label: 'Completion rate', value: percent(stats?.completionRate ?? null), detail: `${stats?.sessionsCancelled ?? 0} cancelled · ${stats?.sessionsUpcoming ?? 0} upcoming` },
   ];
-  const monthly = stats?.monthly ?? [];
-  const max = Math.max(1, ...monthly.map(m => m.sessions));
-  const latest = monthly[monthly.length - 1];
+  const overall = [
+    ['Match requests received', String(stats?.matchRequestsReceived ?? 0)],
+    ['Total hours on EduSwap', String(Math.round(((stats?.hoursTaught ?? 0) + (stats?.hoursLearned ?? 0)) * 10) / 10)],
+    ['Reviews given', String(stats?.reviewsGiven ?? 0)],
+    ['Most taught', stats?.topSkills?.length ? stats.topSkills.map(s => `${s.skill} (${s.count})`).join(', ') : 'None yet'],
+  ];
   const progress = stats?.progress ?? { level: 'New member', levelNumber: 1, percent: 0, nextLevel: 'Getting started', sessionsToNextLevel: 1 };
   const nextStep = progress.nextLevel
     ? `${progress.sessionsToNextLevel} more completed session${progress.sessionsToNextLevel === 1 ? '' : 's'} to reach ${progress.nextLevel}`
@@ -100,40 +96,29 @@ export function PerformancePanel({ uid, person, ownProfile = false, className = 
       </div>
 
       <div className="performance-body">
-        <figure className="performance-chart">
-          <figcaption>Sessions completed per month</figcaption>
-          <div className="performance-bars" role="img" aria-label={`Sessions completed per month: ${monthly.map(m => `${monthLabel(m.month)} ${m.sessions}`).join(', ')}`}>
-            {monthly.map(m => (
-              <div className="performance-bar-slot" key={m.month}>
-                <div className="performance-bar-track">
-                  {m === latest && m.sessions > 0 && <span className="performance-bar-value">{m.sessions}</span>}
-                  <div
-                    className="performance-bar"
-                    style={{ height: `${(m.sessions / max) * 100}%` }}
-                    data-tooltip={`${monthLabel(m.month)}: ${m.sessions} session${m.sessions === 1 ? '' : 's'}`}
-                    tabIndex={0}
-                    aria-label={`${monthLabel(m.month)}: ${m.sessions} sessions`}
-                  />
-                </div>
-                <span className="performance-bar-label">{monthLabel(m.month)}</span>
+        <div className="performance-overall">
+          <h3>Overall</h3>
+          <p className="performance-overall-text">{overallSummary(stats)}</p>
+          <dl>
+            {overall.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
               </div>
             ))}
-          </div>
-          {stats?.topSkills?.length ? (
-            <p className="performance-top-skills">Most taught: {stats.topSkills.map(s => `${s.skill} (${s.count})`).join(', ')}</p>
-          ) : null}
-        </figure>
+          </dl>
+        </div>
 
         <div className="performance-activity">
           <h3>Recent activity</h3>
           {stats?.recentActivity?.length ? (
             <ul>
               {stats.recentActivity.map((item, i) => {
-                const { icon: Icon, text } = ACTIVITY_TEXT[item.type];
+                const Icon = ACTIVITY_ICON[item.type];
                 return (
                   <li key={`${item.at}-${i}`}>
                     <Icon size={15} aria-hidden="true" />
-                    <span>{text(item.skill, item.rating)}</span>
+                    <span>{activityText(item)}</span>
                     <time dateTime={item.at}>{formatDistanceToNow(new Date(item.at), { addSuffix: true })}</time>
                   </li>
                 );

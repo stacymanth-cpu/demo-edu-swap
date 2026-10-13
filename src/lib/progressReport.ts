@@ -13,15 +13,13 @@ export interface ReportContent {
   level: string;
   levelDetail: string;
   percent: number;
+  overall: string;
   rows: [string, string][];
-  monthly: [string, string][];
   topSkills: string;
   activity: [string, string][];
   footer: string;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const monthName = (key: string) => `${MONTHS[Number(key.slice(5, 7)) - 1] ?? key} ${key.slice(0, 4)}`;
 const percent = (value: number | null | undefined) => (value === null || value === undefined ? '—' : `${Math.round(value)}%`);
 const dateText = (iso: string) => new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -36,6 +34,28 @@ const ACTIVITY: Record<ProfileStats['recentActivity'][number]['type'], (skill: s
   reviewed: (skill, rating) => `Received a ${rating ?? ''}-star review for ${skill}`,
 };
 
+/** One line of recent activity, as shown on the profile and in the PDF. */
+export function activityText(item: ProfileStats['recentActivity'][number]): string {
+  return ACTIVITY[item.type](item.skill, item.rating);
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** A one-sentence overall picture, for example "6 sessions completed (4 taught, 2 learned) with 7 partners...". */
+export function overallSummary(stats: ProfileStats | null): string {
+  const completed = stats?.sessionsCompleted ?? 0;
+  const partners = stats?.partners ?? 0;
+  const hours = Math.round(((stats?.hoursTaught ?? 0) + (stats?.hoursLearned ?? 0)) * 10) / 10;
+  const reviews = stats?.reviewsReceived ?? 0;
+  if (!completed && !partners) return 'No matches or completed sessions yet.';
+  const sessions = completed
+    ? `${plural(completed, 'session')} completed (${stats?.sessionsTaught ?? 0} taught, ${stats?.sessionsLearned ?? 0} learned)`
+    : 'No sessions completed yet';
+  const time = hours ? ` over ${plural(hours, 'hour')}` : '';
+  const rating = stats?.averageRating ? `rated ${stats.averageRating.toFixed(1)} out of 5 from ${plural(reviews, 'review')}` : 'no reviews yet';
+  return `${sessions} with ${plural(partners, 'partner')}${time}; ${rating}.`;
+}
+
 /** Everything the PDF shows, worked out from the student's public statistics. */
 export function progressReportContent(person: ReportPerson, stats: ProfileStats | null, generatedAt = new Date()): ReportContent {
   const progress = stats?.progress ?? { level: 'New member', levelNumber: 1, percent: 0, nextLevel: 'Getting started', sessionsToNextLevel: 1 };
@@ -48,20 +68,21 @@ export function progressReportContent(person: ReportPerson, stats: ProfileStats 
       ? `${progress.sessionsToNextLevel} more completed session${progress.sessionsToNextLevel === 1 ? '' : 's'} to reach ${progress.nextLevel}`
       : 'Highest level reached',
     percent: progress.percent,
+    overall: overallSummary(stats),
     rows: [
       ['Partners matched', String(stats?.partners ?? 0)],
       ['Match requests accepted', percent(stats?.matchAcceptanceRate)],
       ['Sessions completed', `${stats?.sessionsCompleted ?? 0} (${stats?.sessionsTaught ?? 0} taught, ${stats?.sessionsLearned ?? 0} learned)`],
       ['Hours taught / learned', `${stats?.hoursTaught ?? 0} / ${stats?.hoursLearned ?? 0}`],
+      ['Match requests received', String(stats?.matchRequestsReceived ?? 0)],
       ['Completion rate', percent(stats?.completionRate)],
       ['Cancelled / upcoming sessions', `${stats?.sessionsCancelled ?? 0} / ${stats?.sessionsUpcoming ?? 0}`],
       ['Average rating', stats?.averageRating ? `${stats.averageRating.toFixed(1)} out of 5 (${reviews} review${reviews === 1 ? '' : 's'})` : 'No reviews yet'],
       ['Reviews given', String(stats?.reviewsGiven ?? 0)],
       ['Last active', stats?.lastActiveAt ? dateText(stats.lastActiveAt) : '—'],
     ],
-    monthly: (stats?.monthly ?? []).map(m => [monthName(m.month), String(m.sessions)]),
     topSkills: stats?.topSkills?.length ? stats.topSkills.map(s => `${s.skill} (${s.count})`).join(', ') : 'None yet',
-    activity: (stats?.recentActivity ?? []).map(a => [dateText(a.at), ACTIVITY[a.type](a.skill, a.rating)]),
+    activity: (stats?.recentActivity ?? []).map(a => [dateText(a.at), activityText(a)]),
     footer: 'EduSwap updates this report automatically after every match, session and review. Partners and reviewers are not named.',
   };
 }
@@ -88,7 +109,7 @@ export async function downloadProgressReport(person: ReportPerson, stats: Profil
   const c: ReportContent = {
     ...raw,
     title: pdfSafeText(raw.title), subtitle: pdfSafeText(raw.subtitle), topSkills: pdfSafeText(raw.topSkills),
-    rows: safeRows(raw.rows), monthly: safeRows(raw.monthly), activity: safeRows(raw.activity),
+    overall: pdfSafeText(raw.overall), rows: safeRows(raw.rows), activity: safeRows(raw.activity),
   };
   const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
   const left = 18, right = 192, width = right - left;
@@ -131,14 +152,12 @@ export async function downloadProgressReport(person: ReportPerson, stats: Profil
   if (c.percent > 0) pdf.setFillColor(...indigo).roundedRect(left + 5, y + 10, Math.max(3, (width - 10) * c.percent / 100), 3, 1.5, 1.5, 'F');
   y += 24;
 
-  heading('Summary');
-  table(c.rows, 62);
-  heading('Sessions completed per month');
-  table(c.monthly, 62);
-  pdf.setFont('helvetica', 'normal').setFontSize(10).setTextColor(...grey);
-  ensureSpace(8);
-  pdf.text(`Most taught: ${c.topSkills}`, left, y + 1);
-  y += 6;
+  heading('Overall summary');
+  const overallLines = pdf.setFont('helvetica', 'normal').setFontSize(11).splitTextToSize(c.overall, width) as string[];
+  ensureSpace(overallLines.length * 5.5 + 4);
+  pdf.setTextColor(17, 24, 39).text(overallLines, left, y);
+  y += overallLines.length * 5.5 + 3;
+  table([...c.rows, ['Most taught skills', c.topSkills]], 62);
   heading('Recent activity');
   if (c.activity.length) table(c.activity, 34);
   else { pdf.setFont('helvetica', 'normal').setFontSize(10.5).setTextColor(...grey).text('No matches, completed sessions or reviews yet.', left, y); y += 7; }
