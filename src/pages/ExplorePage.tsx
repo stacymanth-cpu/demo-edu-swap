@@ -157,7 +157,15 @@ export function ExplorePage() {
     return getTeachOptions(target).length > 0 && getLearnOptions(target).length > 0;
   };
 
+  // Match requests go only to verified students; the rules refuse the rest.
+  const isVerified = (target: User) => target.studentVerified === true;
+
   const openMatchModal = (target: User) => {
+    if (!isVerified(target)) {
+      setMatchTarget(null);
+      setMatchError(`${target.displayName} has not verified their student account yet, so they cannot receive match requests.`);
+      return;
+    }
     if (!canRequestMatch(target)) {
       setMatchTarget(null);
       setMatchError('No compatible skill exchange exists for this match.');
@@ -483,7 +491,8 @@ export function ExplorePage() {
           </div>
           <div className="ai-recommendation-list">
             {visibleRecommendations.map(rec => {
-              const compatible = canRequestMatch(rec.user);
+              const verified = isVerified(rec.user);
+              const compatible = verified && canRequestMatch(rec.user);
               return (
                 <div key={rec.user.uid} className="ai-recommendation-card">
                   <div className="ai-rec-avatar">{rec.user.photoUrl ? <img src={rec.user.photoUrl} alt={rec.user.displayName} /> : getInitials(rec.user.displayName)}</div>
@@ -498,7 +507,7 @@ export function ExplorePage() {
                     onClick={() => compatible && openMatchModal(rec.user)}
                     disabled={!compatible}
                   >
-                    {compatible ? 'Request match' : 'Unavailable'}
+                    {compatible ? 'Request match' : verified ? 'Unavailable' : 'Not verified yet'}
                   </button>
                 </div>
               );
@@ -561,6 +570,10 @@ export function ExplorePage() {
                   {hasMatch ? (
                     <button className="match-requested-btn" disabled>
                       <Check size={14} /> Match Requested
+                    </button>
+                  ) : !isVerified(u) ? (
+                    <button className="request-match-btn disabled" disabled title="This student has not verified their account yet, so they cannot receive match requests.">
+                      <UserPlus size={14} /> Not Verified Yet
                     </button>
                   ) : canRequestMatch(u) ? (
                     <button className="request-match-btn" onClick={() => openMatchModal(u)} id={`btn-match-${u.uid}`}>

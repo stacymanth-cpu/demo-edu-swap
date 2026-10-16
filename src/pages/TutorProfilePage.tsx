@@ -125,6 +125,10 @@ export function TutorProfilePage() {
 
   const handleSubmitBooking = async () => {
     if (!user || !tutor) return;
+    if (tutor.studentVerified !== true) {
+      setBookingError('This student is not verified yet, so they cannot receive booking requests.');
+      return;
+    }
     if (!selectedLearn || !scheduleDate || !scheduleTime || !learningGoal.trim()) {
       setBookingError('Please select a skill, date, time and enter your learning goal.');
       return;

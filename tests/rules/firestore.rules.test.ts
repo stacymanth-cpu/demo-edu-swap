@@ -367,6 +367,19 @@ describe('matches', () => {
   it('blocks creating a match that is already accepted', async () => {
     await assertFails(addDoc(collection(as('alice'), 'matches'), { user1Id: 'alice', user2Id: 'carol', status: 'accepted' }));
   });
+
+  it('sends match requests only to verified students', async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'users/verified'), { uid: 'verified', studentVerified: true });
+      await setDoc(doc(context.firestore(), 'users/unverified'), { uid: 'unverified', studentVerified: false });
+      await setDoc(doc(context.firestore(), 'users/older'), { uid: 'older' });
+    });
+    const request = (to: string) => addDoc(collection(as('alice'), 'matches'), { user1Id: 'alice', user2Id: to, status: 'pending' });
+    await assertSucceeds(request('verified'));
+    await assertFails(request('unverified'));
+    await assertFails(request('older'));
+    await assertFails(request('nobody'));
+  });
 });
 
 describe('chat', () => {

@@ -26,6 +26,8 @@ test.describe.serial('Explore, match and chat', () => {
   });
 
   test('Bongani accepts and both students can chat live', async ({ browser }) => {
+    // Two full sign-ins (each with a PIN) in one test; allow more than the default minute.
+    test.setTimeout(120_000);
     // One browser per student, closed afterwards so their live listeners don't keep the
     // emulator busy during later tests.
     const bonganiContext = await browser.newContext();
